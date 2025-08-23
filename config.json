@@ -12,7 +12,7 @@
       "101-220": null,
       "221-300": null,
       "301-469": null,
-      "470+": 8
+      "470+": 7
     },
     "New iPhone(Unlocked)": {
       "1-100": null,
@@ -78,6 +78,13 @@
       "470+": null
     },
     "Google Product": {
+      "1-100": null,
+      "101-220": null,
+      "221-300": null,
+      "301-469": null,
+      "470+": null
+    },
+    "consoles": {
       "1-100": null,
       "101-220": null,
       "221-300": null,
