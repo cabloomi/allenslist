@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Price List</title>
+<title>Allens List</title>
 <style>
 :root{
   --bg:#050708;
@@ -26,23 +26,17 @@ header {
   border-bottom:1px solid var(--line); padding:10px 14px; display:flex; align-items:center; gap:10px;
 }
 h1 { font-size:18px; margin:0; letter-spacing:1px; color:var(--accent); text-shadow:0 0 8px rgba(0,255,156,0.35); }
-.badge { font-size:12px; color:var(--muted); opacity:.8; }
+.phone { margin-left:auto; color:var(--muted); text-decoration:none; padding:6px 8px; border-radius:8px; border:1px solid var(--line); background:var(--panel-2); }
+.phone:hover { color:var(--text); border-color:var(--accent); }
+.tg { display:inline-flex; align-items:center; justify-content:center; margin-left:8px; padding:6px; border-radius:8px; border:1px solid var(--line); background:var(--panel-2); color:var(--muted); text-decoration:none; }
+.tg:hover { color:var(--text); border-color:var(--accent); }
+.tg-icon { display:block; }
 .lock-btn {
-  margin-left:auto; border:1px solid var(--line); background:var(--panel-2);
+  margin-left:8px; border:1px solid var(--line); background:var(--panel-2);
   color:var(--muted); padding:8px 10px; border-radius:10px; cursor:pointer;
 }
 .pages { position:sticky; top:50px; z-index:15; padding:8px 10px; background:var(--panel); border-bottom:1px solid var(--line); }
 .pages select { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--panel-2); color:var(--text); font-size:14px; }
-
-.tabs {
-  position:sticky; top:50px; z-index:15; display:flex; gap:8px; overflow:auto; padding:8px 10px; background:var(--panel);
-  border-bottom:1px solid var(--line);
-}
-.tab {
-  padding:8px 12px; border-radius:10px; border:1px solid var(--line); background:var(--panel-2);
-  color:var(--muted); cursor:pointer; white-space:nowrap; font-size:14px;
-}
-.tab.active { background:rgba(0,255,156,.08); color:var(--text); border-color:var(--accent); box-shadow:0 0 12px rgba(0,255,156,.15) inset; }
 .search { display:flex; gap:8px; padding:10px; background:var(--panel); border-bottom:1px solid var(--line); position:sticky; top:100px; z-index:14; }
 .search input {
   flex:1; padding:12px 14px; border-radius:10px; border:1px solid var(--line); background:var(--panel-2);
@@ -82,8 +76,13 @@ footer { padding:28px 14px; color:var(--muted); opacity:.75; }
 </head>
 <body>
 <header>
-  <h1>Price Matrix</h1>
-  <span class="badge">Static site • Global config via <code>config.json</code></span>
+  <h1>Allens List</h1>
+  <a class="phone" href="tel:13135392838">(313) 539-2838</a>
+  <a class="tg" href="https://t.me/apple_pays" target="_blank" rel="noopener" aria-label="Telegram channel">
+    <svg class="tg-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <path d="M21.5 3.5L2.7 10.8c-.8.3-.8 1.4 0 1.6l4.8 1.5 1.8 5.6c.2.8 1.2.9 1.7.3l2.6-2.7 4.8 3.6c.6.4 1.5.1 1.7-.6l3.2-15.2c.2-.9-.6-1.6-1.4-1.4zM8.4 12.9l9.5-6.1c.2-.1.4.2.2.3l-7.7 7.2c-.2.2-.3.4-.3.6l-.3 2.1c0 .2-.4.2-.4 0L8.4 12.9z" fill="currentColor"/>
+    </svg>
+  </a>
   <button class="lock-btn" id="openEngine">🔒 Engine</button>
 </header>
 <div class="pages"><select id="sheetSelect"></select></div>
@@ -140,7 +139,6 @@ async function loadGlobalConfigIfAny() {
       const js = await res.json();
       if (js && typeof js === 'object') {
         GLOBAL_CFG = js;
-        // Also store locally for instant subsequent loads
         localStorage.setItem('engineConfigV1', JSON.stringify(js));
       }
     }
@@ -168,55 +166,41 @@ function downloadConfigFile(cfg) {
   URL.revokeObjectURL(url);
 }
 
-
 // ==== SEARCH NORMALIZATION ====
 function normText(s) {
   if (!s) return '';
   s = String(s).toLowerCase();
-  // unify inch markers and hyphens
   s = s.replace(/["”]/g, ' inch ');
-  s = s.replace(/\b(\d+)\s*-\s*inch\b/g, '$1 inch');
-  s = s.replace(/\b(\d+)\s*inch(es)?\b/g, '$1 inch');
+  s = s.replace(/\\b(\\d+)\\s*-\\s*inch\\b/g, '$1 inch');
+  s = s.replace(/\\b(\\d+)\\s*inch(es)?\\b/g, '$1 inch');
   s = s.replace(/-/g, ' ');
-  // unify 5 g -> 5g, 4 g -> 4g
-  s = s.replace(/\b([2-6])\s*g\b/g, '$1g');
-  // collapse extra spaces
-  s = s.replace(/[^a-z0-9\. ]+/g, ' ');
-  s = s.replace(/\s+/g, ' ').trim();
+  s = s.replace(/\\b([2-6])\\s*g\\b/g, '$1g');
+  s = s.replace(/[^a-z0-9\\. ]+/g, ' ');
+  s = s.replace(/\\s+/g, ' ').trim();
   return s;
 }
-
-function buildSearchBlob(name, sheetName) {
+function buildSearchBlob(name) {
   const base = normText(name);
-  const parts = [base];
-  // Sheet-name agnostic: no category tokens injected from sheet titles
-  // Token variants: remove the word 'ipad'/'iphone' to catch abbreviations like "air 13"
-  const stripped = base.replace(/\b(ipad|iphone|apple|samsung)\b/g, '').replace(/\s+/g,' ').trim();
-  if (stripped) parts.push(stripped);
-  return parts.join(' ');
+  const stripped = base.replace(/\\b(ipad|iphone|apple|samsung)\\b/g, '').replace(/\\s+/g,' ').trim();
+  return stripped ? (base + ' ' + stripped) : base;
 }
-
 let PREPARED = null;
 function prepareIndex() {
   if (PREPARED) return;
   PREPARED = {};
   Object.entries(DATASETS).forEach(([sheet, rows]) => {
-    PREPARED[sheet] = rows.map(r => {
-      return {
-        device: r.device,
-        price: r.price,
-        search: buildSearchBlob(r.device, sheet)
-      };
-    });
+    PREPARED[sheet] = rows.map(r => ({
+      device: r.device,
+      price: r.price,
+      search: buildSearchBlob(r.device)
+    }));
   });
 }
-
-function matchesQuery(row, sheet, q) {
+function matchesQuery(row, q) {
   if (!q) return true;
   const hay = row.search;
   const nq = normText(q);
   const tokens = nq.split(' ').filter(Boolean);
-  // every token must be found somewhere in the haystack
   for (const tok of tokens) {
     if (!hay.includes(tok)) return false;
   }
@@ -255,6 +239,7 @@ function applyDiscount(p, pct) { return p * (1 - pct/100); }
 
 function render() {
   prepareIndex();
+
   // Pages dropdown
   sheetSelect.innerHTML = '';
   Object.keys(DATASETS).forEach((name) => {
@@ -274,13 +259,12 @@ function render() {
 
     const list = document.createElement('div');
     list.className = 'list';
-    const q = searchEl.value.trim().toLowerCase();
 
     rows.forEach(r => {
       const dev = String(r.device);
       const base = Number(r.price);
       if (!dev || isNaN(base)) return;
-      if (!matchesQuery(r, name, searchEl.value)) return;
+      if (!matchesQuery(r, searchEl.value)) return;
 
       const offPct = discountFor(name, base);
       const finalPrice = applyDiscount(base, offPct);
@@ -310,7 +294,6 @@ function render() {
 }
 
 searchEl.addEventListener('input', render);
-
 sheetSelect.addEventListener('change', (e) => { activeSheet = e.target.value; render(); });
 
 // Engine Room logic
