@@ -1,0 +1,55 @@
+name: Build & Deploy to Cloudflare Pages (every 30 min)
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"    # every 30 minutes (UTC)
+  workflow_dispatch:          # allow manual run
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas openpyxl
+
+      - name: Run generator
+        shell: bash
+        run: |
+          chmod +x ./run.command || true
+          ./run.command || python generate_index.py
+
+      - name: Prepare site folder
+        run: |
+          rm -rf _site
+          mkdir -p _site
+          cp -a index.html _site/
+
+      - name: Publish to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: 1i6MFwiicbFakRcKlUq0KF3ho88FMTDMuNGF-WZE
+          accountId: c7b2bb3a435b4434235f331853e0bb5e
+          projectName: allenslists
+          directory: _site
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      # Optional: Purge Cloudflare cache if you serve a custom domain via the proxy
+      # (Uncomment this step and set CF_ZONE_ID secret to enable.)
+      # - name: Purge Cloudflare Cache (optional)
+      #   if: success() && secrets.CF_ZONE_ID != ''
+      #   run: |
+      #     curl -X POST "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/purge_cache" \
+      #       -H "Authorization: Bearer ${{ secrets.CF_API_TOKEN }}" \
+      #       -H "Content-Type: application/json" \
+      #       --data '{"purge_everything":true}'
