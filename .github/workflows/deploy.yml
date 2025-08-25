@@ -4,7 +4,11 @@ on:
   schedule:
     - cron: "*/30 * * * *"    # every 30 minutes (UTC)
   workflow_dispatch:          # allow manual run
-
+  
+permissions:
+  contents: read
+  deployments: write
+  
 jobs:
   deploy:
     runs-on: ubuntu-latest
