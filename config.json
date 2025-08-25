@@ -40,8 +40,8 @@
         "flat": null
       },
       "470+": {
-        "pct": null,
-        "flat": 7
+        "pct": 6,
+        "flat": null
       }
     },
     "IPHONE NEW UNLOCKED": {
@@ -266,46 +266,46 @@
     },
     "GAMING": {
       "1-100": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       },
       "101-220": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       },
       "221-300": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       },
       "301-469": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       },
       "470+": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       }
     },
     "TOOLS": {
       "1-100": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       },
       "101-220": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       },
       "221-300": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       },
       "301-469": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       },
       "470+": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       }
     }
   },
