@@ -6,5 +6,117 @@
     "301-469": 13,
     "470+": 10
   },
-  "perSheet": {}
+  "perSheet": {
+    "New iPhone (Locked)": {
+      "1-100": null,
+      "101-220": null,
+      "221-300": null,
+      "301-469": null,
+      "470+": 7
+    },
+    "New iPhone(Unlocked)": {
+      "1-100": null,
+      "101-220": null,
+      "221-300": null,
+      "301-469": null,
+      "470+": null
+    },
+    "Used iPhone(Unlocked)": {
+      "1-100": null,
+      "101-220": null,
+      "221-300": null,
+      "301-469": null,
+      "470+": null
+    },
+    "Used iPhone(Locked)": {
+      "1-100": null,
+      "101-220": null,
+      "221-300": null,
+      "301-469": null,
+      "470+": null
+    },
+    "Macbook": {
+      "1-100": null,
+      "101-220": null,
+      "221-300": null,
+      "301-469": null,
+      "470+": null
+    },
+    "iPad": {
+      "1-100": null,
+      "101-220": null,
+      "221-300": null,
+      "301-469": null,
+      "470+": null
+    },
+    "iWatch&Airpod": {
+      "1-100": null,
+      "101-220": null,
+      "221-300": null,
+      "301-469": null,
+      "470+": null
+    },
+    "Samsung(Unlocked)": {
+      "1-100": null,
+      "101-220": null,
+      "221-300": null,
+      "301-469": null,
+      "470+": null
+    },
+    "Samsung(Locked)": {
+      "1-100": null,
+      "101-220": null,
+      "221-300": null,
+      "301-469": null,
+      "470+": null
+    },
+    "iCloud": {
+      "1-100": null,
+      "101-220": null,
+      "221-300": null,
+      "301-469": null,
+      "470+": null
+    },
+    "Google Product": {
+      "1-100": null,
+      "101-220": null,
+      "221-300": null,
+      "301-469": null,
+      "470+": null
+    },
+    "consoles": {
+      "1-100": null,
+      "101-220": null,
+      "221-300": null,
+      "301-469": null,
+      "470+": null
+    }
+  },
+  "buckets": [
+    [
+      "1-100",
+      1,
+      100
+    ],
+    [
+      "101-220",
+      101,
+      220
+    ],
+    [
+      "221-300",
+      221,
+      300
+    ],
+    [
+      "301-469",
+      301,
+      469
+    ],
+    [
+      "470+",
+      470,
+      null
+    ]
+  ]
 }
