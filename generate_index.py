@@ -1,4 +1,259 @@
-<!doctype html>
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Offline index generator (NO AI). Rebuilds index.html from scratch each run.
+
+Features:
+- Theme picker = dropdown only
+- Editable price buckets (label + low/high) saved in localStorage
+- Discounts support BOTH % and $ (defaults & per-sheet)
+- Rounding:
+    * Always round to nearest $10
+    * If result > $340 and ends with **10**, round down to **00**
+    * If result > $340 and ends with **90**, round up to **00**
+    * Otherwise leave as-is (so 670 stays 670)
+- Fuzzy search with closest-match ranking (numeric proximity, partial tokens)
+
+Usage:
+  python3 generate_index.py    # looks for source.xlsx (or source.csv/.xls/...)
+Env:
+  ENGINE_PIN (default "1337")  # PIN for opening Engine Room (hashed client-side)
+"""
+import os, sys, re, json, math, hashlib
+from pathlib import Path
+import json
+import urllib.parse
+import urllib.request
+
+try:
+    import pandas as pd
+except ImportError:
+    print("This script requires pandas. Install with: pip install pandas openpyxl", file=sys.stderr)
+    sys.exit(1)
+
+
+
+# === Google Sheets (required) ==================================================
+def _env(key, default=None): 
+    return os.getenv(key, default)
+
+def _get_gsheet_id_from_env_or_default():
+    url = _env("GSHEET_URL") or _env("GOOGLE_SHEET_URL")
+    if url and "/spreadsheets/d/" in url:
+        try:
+            return url.split("/spreadsheets/d/")[1].split("/")[0]
+        except Exception:
+            pass
+    return _env("GSHEET_ID") or _env("GOOGLE_SHEET_ID") or "1_Zt2pj5KMEvHdfmxLmLUpmZR1crKQNFKpIfuuqhvbbU"
+
+def _fetch_visible_sheets_meta(spreadsheet_id, api_key):
+    meta_url = "https://sheets.googleapis.com/v4/spreadsheets/" + spreadsheet_id + "?fields=sheets(properties(sheetId,title,hidden))&key=" + api_key
+    try:
+        with urllib.request.urlopen(meta_url) as resp:
+            meta = json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        print("[FATAL] Failed to fetch sheet metadata:", e)
+        return None
+    out = []
+    for sh in (meta.get("sheets") or []):
+        props = sh.get("properties") or {}
+        if not props.get("hidden", False):
+            gid = props.get("sheetId")
+            title = props.get("title") or ("Sheet_%s" % gid if gid is not None else "Sheet")
+            out.append((title, gid))
+    return out
+
+def load_gsheet_tables():
+    sid = _get_gsheet_id_from_env_or_default()
+    api_key = _env("GOOGLE_API_KEY") or _env("GCP_API_KEY") or "AIzaSyAbPCaQjUAWwtL7WR9srX2cFpIEdEuJCIw"
+    meta = _fetch_visible_sheets_meta(sid, api_key)
+    if not meta:
+        print("[FATAL] Could not list tabs (ensure sheet is link-viewable and API key is valid).")
+        return None
+    print(f"[GS] Visible tabs detected: {len(meta)}")
+    data = {}
+    for title, gid in meta:
+        if gid is None:
+            continue
+        csv_url = "https://docs.google.com/spreadsheets/d/" + sid + "/export?format=csv&gid=" + str(gid)
+        try:
+            df = pd.read_csv(csv_url, header=None, dtype=object, na_filter=False)
+        except Exception as e:
+            print(f"[WARN] Failed CSV read for '{title}' (gid={gid}): {e}")
+            continue
+        rows = []
+        for _, row in df.iterrows():
+            d, p = row_to_device_and_price(row.tolist())
+            if d is not None:
+                rows.append({"device": d, "display": clean_name(d), "price": float(p)})
+        if rows:
+            data[title] = rows
+        print(f"[GS] {title}: total={len(df)} kept={len(rows)} skipped={len(df)-len(rows)}")
+    if not data:
+        print("[FATAL] No rows found in any visible tabs.")
+        return None
+    return data
+# =============================================================================
+ENGINE_PIN = os.getenv("ENGINE_PIN", "1337")
+PIN_SHA256 = hashlib.sha256(ENGINE_PIN.encode("utf-8")).hexdigest()
+
+# Back-compat defaults (percent only). JS accepts both % and $ rules.
+DEFAULT_RULES = {
+    "1-100": 30,
+    "101-220": 20,
+    "221-300": 15,
+    "301-469": 13,
+    "470+": 10
+}
+
+# Default buckets (editable in Engine Room; saved as cfg.buckets).
+PRICE_BUCKETS = [
+    ("1-100",       1,   100),
+    ("101-220",     101, 220),
+    ("221-300",     221, 300),
+    ("301-469",     301, 469),
+    ("470+",        470, float("inf")),
+]
+
+SOURCE_NAME_BASE = "source"
+SUP_EXTS = [".xlsx", ".xls", ".xlsm", ".xlsb", ".ods", ".csv"]
+
+def find_source_file(cwd: Path) -> Path:
+    # prefers files literally named "source.*" in current directory
+    for p in cwd.iterdir():
+        if p.is_file() and p.stem.lower() == SOURCE_NAME_BASE and p.suffix.lower() in SUP_EXTS:
+            return p
+    fallback = cwd / "source.xlsx"
+    if fallback.exists():
+        return fallback
+    raise FileNotFoundError(
+        "Couldn't find a file named 'source' with a supported extension in the current directory.\n"
+        "Supported: .xlsx .xls .xlsm .xlsb .ods .csv"
+    )
+
+def first_text(cells):
+    for v in cells:
+        if isinstance(v, str):
+            s = v.strip()
+            if s:
+                return s
+    return None
+
+def first_number(cells):
+    for v in cells:
+        if isinstance(v, (int, float)) and not (isinstance(v, float) and (math.isnan(v) or math.isinf(v))):
+            return float(v)
+        if isinstance(v, str):
+            sv = v.strip().replace(",", "")
+            # exact number
+            if re.fullmatch(r"-?\d+(?:\.\d+)?", sv):
+                try:
+                    return float(sv)
+                except Exception:
+                    pass
+            # tolerant: mixed text like "$410", "410-"
+            m = re.search(r"-?\d+(?:\.\d+)?", sv)
+            if m:
+                try:
+                    return float(m.group(0))
+                except Exception:
+                    pass
+    return None
+
+
+HEADER_WORDS = {
+    "device","price","prices","model","storage","color",
+    "note","notes","sealed","open","active","natural",
+    "locked carrier","activation status"
+}
+
+def looks_like_header_or_junk(text: str) -> bool:
+    t = text.strip().lower()
+    if not t or len(t) <= 1:
+        return True
+    if t in HEADER_WORDS:
+        return True
+    if any(x in t for x in ["header","total","sum of","subtotal","grand total","file","page","tab","sheet"]):
+        return True
+    # too many non-alphanumerics
+    if len(re.sub(r"[A-Za-z0-9]", "", t)) > len(t) * 0.6:
+        return True
+    return False
+
+def clean_name(text: str) -> str:
+    if not isinstance(text, str):
+        text = str(text)
+    s = text.strip()
+    s = re.sub(r'(\d+)\s*\\"', r'\1-inch', s)
+    s = re.sub(r'\b(\d+)\s*-\s*inch\b', r'\1-inch', s, flags=re.I)
+    s = re.sub(r'\b(\d+)\s*inch(es)?\b', r'\1-inch', s, flags=re.I)
+    s = re.sub(r'\b([2-6])\s*g\b', lambda m: m.group(1) + 'G', s, flags=re.I)
+    s = re.sub(r'\b([2-6])g\b', lambda m: m.group(1) + 'G', s, flags=re.I)
+    s = re.sub(r'\b(\d+)\s*(gb|g|gig|gigs)\b', r'\1GB', s, flags=re.I)
+    s = re.sub(r'\b(\d+)\s*(tb|t|terabyte|terabytes)\b', r'\1TB', s, flags=re.I)
+    s = re.sub(r'[–—]+', '-', s)
+    s = re.sub(r'\s*-\s*', '-', s)
+    s = re.sub(r'[^A-Za-z0-9\-+/# ]+', ' ', s)
+    s = re.sub(r'\s+', ' ', s).strip()
+    def smart_cap(word: str) -> str:
+        wl = word.lower()
+        keep_upper = {'GB','TB','5G','4G','3G','LTE','SE','XR','XS','S','FE','Z','UHD'}
+        exact = {'iPhone':'iPhone','iPad':'iPad','iMac':'iMac','iPod':'iPod','MacBook':'MacBook','AirPods':'AirPods',
+                 'Galaxy':'Galaxy','Note':'Note','Watch':'Watch','Ultra':'Ultra','Pro':'Pro','Max':'Max','Plus':'Plus','Mini':'Mini'}
+        if wl.upper() in keep_upper: return wl.upper()
+        if re.match(r'^\d', word): return word
+        for k,v in exact.items():
+            if wl == k.lower(): return v
+        return word.capitalize()
+    parts = s.split(' ')
+    s = ' '.join(smart_cap(w) for w in parts)
+    s = re.sub(r'(\d+)-Inch', r'\1-inch', s)
+    return s
+
+def row_to_device_and_price(row):
+    cells = list(row)
+    dev = first_text(cells)
+    price = first_number(cells[1:]) if dev is not None else None
+    if dev is None or price is None:
+        return (None, None)
+    if looks_like_header_or_junk(dev):
+        return (None, None)
+    if price <= 0:
+        return (None, None)
+    return (dev.strip(), float(price))
+
+def load_workbook_tables(src: Path):
+    data = {}
+    if src.suffix.lower() == ".csv":
+        df = pd.read_csv(src, header=None, dtype=object, na_filter=False)
+        rows = []
+        for _, row in df.iterrows():
+            d, p = row_to_device_and_price(row.tolist())
+            if d is not None:
+                rows.append({"device": d, "display": clean_name(d), "price": float(p)})
+        if rows:
+            data[src.stem] = rows
+    else:
+        xls = pd.ExcelFile(src)
+        for sheet_name in xls.sheet_names:
+            df = pd.read_excel(src, sheet_name=sheet_name, header=None, dtype=object, na_filter=False)
+            rows = []
+            for _, row in df.iterrows():
+                d, p = row_to_device_and_price(row.tolist())
+                if d is not None:
+                    rows.append({"device": d, "display": clean_name(d), "price": float(p)})
+            if rows:
+                data[sheet_name] = rows
+    if not data:
+        raise ValueError("No valid device/price rows found. Check the 'source' file format.")
+    return data
+
+def build_html(data: dict, pin_sha256: str, defaults: dict, out_path: Path):
+    dataset_js = json.dumps(data, separators=(",", ":"), ensure_ascii=False)
+    defaults_js = json.dumps(defaults, separators=(",", ":"), ensure_ascii=False)
+    price_buckets_js = json.dumps(PRICE_BUCKETS)
+
+    html = r"""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -202,10 +457,10 @@ footer { padding:28px 14px; color:var(--muted); opacity:.75; }
 
 <script>
 // ==== DATA ====
-const DATASETS = {"IPHONE NEW LOCKED":[{"device":"16 Pro Max 256GB","display":"16 Pro Max 256GB","price":710.0},{"device":"16 Pro Max 512GB","display":"16 Pro Max 512GB","price":810.0},{"device":"16 Pro Max 1TB","display":"16 Pro Max 1TB","price":900.0},{"device":"16 Pro 128GB","display":"16 Pro 128GB","price":550.0},{"device":"16 Pro 256GB","display":"16 Pro 256GB","price":650.0},{"device":"16 Pro 512GB","display":"16 Pro 512GB","price":730.0},{"device":"16 Pro 1TB","display":"16 Pro 1TB","price":800.0},{"device":"16 Plus 128GB","display":"16 Plus 128GB","price":430.0},{"device":"16 Plus 256GB","display":"16 Plus 256GB","price":490.0},{"device":"16 Plus 512GB","display":"16 Plus 512GB","price":575.0},{"device":"16E 128GB","display":"16E 128GB","price":220.0},{"device":"16E 256GB","display":"16E 256GB","price":270.0},{"device":"16E 512GB","display":"16E 512GB","price":330.0},{"device":"16 128GB","display":"16 128GB","price":395.0},{"device":"16 256GB","display":"16 256GB","price":475.0},{"device":"16 512GB","display":"16 512GB","price":520.0},{"device":"15 Pro Max 512GB","display":"15 Pro Max 512GB","price":620.0},{"device":"15 Pro Max 1TB","display":"15 Pro Max 1TB","price":690.0},{"device":"15 Pro 128GB","display":"15 Pro 128GB","price":440.0},{"device":"15 Pro 256GB","display":"15 Pro 256GB","price":500.0},{"device":"15 Pro 512GB","display":"15 Pro 512GB","price":580.0},{"device":"15 Pro 1TB","display":"15 Pro 1TB","price":640.0},{"device":"15 Plus 128GB","display":"15 Plus 128GB","price":330.0},{"device":"15 Plus 256GB","display":"15 Plus 256GB","price":410.0},{"device":"15 Plus 512GB","display":"15 Plus 512GB","price":460.0},{"device":"15 128GB","display":"15 128GB","price":270.0},{"device":"15 256GB","display":"15 256GB","price":350.0},{"device":"15 512GB","display":"15 512GB","price":410.0}],"IPHONE NEW UNLOCKED":[{"device":"16 Pro Max 256GB","display":"16 Pro Max 256GB","price":910.0},{"device":"16 Pro Max 256GB Desert","display":"16 Pro Max 256GB Desert","price":920.0},{"device":"16 Pro Max 512GB","display":"16 Pro Max 512GB","price":1100.0},{"device":"16 Pro Max 1TB","display":"16 Pro Max 1TB","price":1220.0},{"device":"16 Pro 128GB","display":"16 Pro 128GB","price":750.0},{"device":"16 Pro 256GB","display":"16 Pro 256GB","price":840.0},{"device":"16 Pro 512GB","display":"16 Pro 512GB","price":940.0},{"device":"16 Pro 1TB","display":"16 Pro 1TB","price":1040.0},{"device":"16 Plus 128GB","display":"16 Plus 128GB","price":600.0},{"device":"16 Plus 256GB","display":"16 Plus 256GB","price":690.0},{"device":"16 Plus 512GB","display":"16 Plus 512GB","price":740.0},{"device":"16 128GB","display":"16 128GB","price":550.0},{"device":"16 256GB","display":"16 256GB","price":620.0},{"device":"16 512GB","display":"16 512GB","price":650.0},{"device":"16E 128GB","display":"16E 128GB","price":320.0},{"device":"16E 256GB","display":"16E 256GB","price":400.0},{"device":"16E 512GB","display":"16E 512GB","price":490.0},{"device":"15 Pro Max 256GB","display":"15 Pro Max 256GB","price":810.0},{"device":"15 Pro Max 512GB","display":"15 Pro Max 512GB","price":890.0},{"device":"15 Pro Max 1TB","display":"15 Pro Max 1TB","price":920.0},{"device":"15 Pro 128GB","display":"15 Pro 128GB","price":680.0},{"device":"15 Pro 256GB","display":"15 Pro 256GB","price":780.0},{"device":"15 Pro 512GB","display":"15 Pro 512GB","price":810.0},{"device":"15 Pro 1TB","display":"15 Pro 1TB","price":860.0},{"device":"15 Plus 128GB","display":"15 Plus 128GB","price":480.0},{"device":"15 Plus 256GB","display":"15 Plus 256GB","price":560.0},{"device":"15 Plus 512GB","display":"15 Plus 512GB","price":600.0},{"device":"15 128GB","display":"15 128GB","price":460.0},{"device":"15 256GB","display":"15 256GB","price":520.0},{"device":"15 512GB","display":"15 512GB","price":550.0}],"IPHONE USED LOCKED":[{"device":"16 Pro Max 256GB","display":"16 Pro Max 256GB","price":610.0},{"device":"16 Pro Max 512GB","display":"16 Pro Max 512GB","price":670.0},{"device":"16 Pro Max 1TB","display":"16 Pro Max 1TB","price":700.0},{"device":"16 Pro 128GB","display":"16 Pro 128GB","price":450.0},{"device":"16 Pro 256GB","display":"16 Pro 256GB","price":510.0},{"device":"16 Pro 512GB","display":"16 Pro 512GB","price":540.0},{"device":"16 Pro 1TB","display":"16 Pro 1TB","price":570.0},{"device":"16 Plus 128GB","display":"16 Plus 128GB","price":330.0},{"device":"16 Plus 256GB","display":"16 Plus 256GB","price":370.0},{"device":"16 Plus 512GB","display":"16 Plus 512GB","price":400.0},{"device":"16 128GB","display":"16 128GB","price":300.0},{"device":"16 256GB","display":"16 256GB","price":335.0},{"device":"16 512GB","display":"16 512GB","price":370.0},{"device":"16E 128GB","display":"16E 128GB","price":140.0},{"device":"16E 256GB","display":"16E 256GB","price":190.0},{"device":"16E 512GB","display":"16E 512GB","price":210.0},{"device":"15 Pro Max 256GB","display":"15 Pro Max 256GB","price":445.0},{"device":"15 Pro Max 512GB","display":"15 Pro Max 512GB","price":485.0},{"device":"15 Pro Max 1TB","display":"15 Pro Max 1TB","price":505.0},{"device":"15 Pro 128GB","display":"15 Pro 128GB","price":320.0},{"device":"15 Pro 256GB","display":"15 Pro 256GB","price":360.0},{"device":"15 Pro 512GB","display":"15 Pro 512GB","price":380.0},{"device":"15 Pro 1TB","display":"15 Pro 1TB","price":400.0},{"device":"15 Plus 128GB","display":"15 Plus 128GB","price":235.0},{"device":"15 Plus 256GB","display":"15 Plus 256GB","price":275.0},{"device":"15 Plus 512GB","display":"15 Plus 512GB","price":285.0},{"device":"15 128GB","display":"15 128GB","price":210.0},{"device":"15 256GB","display":"15 256GB","price":250.0},{"device":"15 512GB","display":"15 512GB","price":270.0},{"device":"14 Pro Max 128GB","display":"14 Pro Max 128GB","price":290.0},{"device":"14 Pro Max 256GB","display":"14 Pro Max 256GB","price":305.0},{"device":"14 Pro Max 512GB","display":"14 Pro Max 512GB","price":315.0},{"device":"14 Pro Max 1TB","display":"14 Pro Max 1TB","price":325.0},{"device":"14 Pro 128GB","display":"14 Pro 128GB","price":250.0},{"device":"14 Pro 256GB","display":"14 Pro 256GB","price":265.0},{"device":"14 Pro 512GB","display":"14 Pro 512GB","price":275.0},{"device":"14 Pro 1TB","display":"14 Pro 1TB","price":285.0},{"device":"14 Plus 128GB","display":"14 Plus 128GB","price":100.0},{"device":"14 Plus 256GB","display":"14 Plus 256GB","price":120.0},{"device":"14 Plus 512GB","display":"14 Plus 512GB","price":130.0},{"device":"14 128GB","display":"14 128GB","price":100.0},{"device":"14 256GB","display":"14 256GB","price":120.0},{"device":"14 512GB","display":"14 512GB","price":130.0},{"device":"13 Pro Max 128GB","display":"13 Pro Max 128GB","price":180.0},{"device":"13 Pro Max 256GB","display":"13 Pro Max 256GB","price":190.0},{"device":"13 Pro Max 512GB","display":"13 Pro Max 512GB","price":210.0},{"device":"13 Pro Max 1TB","display":"13 Pro Max 1TB","price":220.0},{"device":"13 Pro 128GB","display":"13 Pro 128GB","price":140.0},{"device":"13 Pro 256GB","display":"13 Pro 256GB","price":150.0},{"device":"13 Pro 512GB","display":"13 Pro 512GB","price":160.0},{"device":"13 Pro 1TB","display":"13 Pro 1TB","price":170.0},{"device":"13  128GB","display":"13 128GB","price":70.0},{"device":"13  256GB","display":"13 256GB","price":80.0},{"device":"13  512GB","display":"13 512GB","price":90.0},{"device":"13 Mini 128GB","display":"13 Mini 128GB","price":70.0},{"device":"13 Mini 256GB","display":"13 Mini 256GB","price":80.0},{"device":"13 Mini 512GB","display":"13 Mini 512GB","price":90.0},{"device":"SE 3nd 64GB","display":"SE 3nd 64GB","price":15.0},{"device":"SE 3nd 128GB","display":"SE 3nd 128GB","price":15.0},{"device":"SE 3nd 256GB","display":"SE 3nd 256GB","price":15.0},{"device":"12 Pro Max 128GB","display":"12 Pro Max 128GB","price":55.0},{"device":"12 Pro Max 256GB","display":"12 Pro Max 256GB","price":65.0},{"device":"12 Pro Max 512GB","display":"12 Pro Max 512GB","price":75.0},{"device":"12 Pro 128GB","display":"12 Pro 128GB","price":55.0},{"device":"12 Pro 256GB","display":"12 Pro 256GB","price":60.0},{"device":"12 Pro 512GB","display":"12 Pro 512GB","price":70.0},{"device":"12 64GB","display":"12 64GB","price":15.0},{"device":"12 128GB","display":"12 128GB","price":20.0},{"device":"12 256GB","display":"12 256GB","price":20.0},{"device":"12 Mini 64GB","display":"12 Mini 64GB","price":15.0},{"device":"12 Mini 128GB","display":"12 Mini 128GB","price":20.0},{"device":"12 Mini 256GB","display":"12 Mini 256GB","price":20.0}],"IPHONE USED UNLOCKED":[{"device":"16 Pro Max 256GB","display":"16 Pro Max 256GB","price":770.0},{"device":"16 Pro Max 512GB","display":"16 Pro Max 512GB","price":830.0},{"device":"16 Pro Max 1TB","display":"16 Pro Max 1TB","price":860.0},{"device":"16 Pro 128GB","display":"16 Pro 128GB","price":600.0},{"device":"16 Pro 256GB","display":"16 Pro 256GB","price":650.0},{"device":"16 Pro 512GB","display":"16 Pro 512GB","price":700.0},{"device":"16 Pro 1TB","display":"16 Pro 1TB","price":730.0},{"device":"16 Plus 128GB","display":"16 Plus 128GB","price":470.0},{"device":"16 Plus 256GB","display":"16 Plus 256GB","price":500.0},{"device":"16 Plus 512GB","display":"16 Plus 512GB","price":520.0},{"device":"16 128GB","display":"16 128GB","price":420.0},{"device":"16  256GB","display":"16 256GB","price":450.0},{"device":"16  512GB","display":"16 512GB","price":470.0},{"device":"16E 128GB","display":"16E 128GB","price":250.0},{"device":"16E  256GB","display":"16E 256GB","price":290.0},{"device":"16E  512GB","display":"16E 512GB","price":320.0},{"device":"15 Pro Max 256GB","display":"15 Pro Max 256GB","price":580.0},{"device":"15 Pro Max 512GB","display":"15 Pro Max 512GB","price":610.0},{"device":"15 Pro Max 1TB","display":"15 Pro Max 1TB","price":640.0},{"device":"15 Pro 128GB","display":"15 Pro 128GB","price":450.0},{"device":"15 Pro 256GB","display":"15 Pro 256GB","price":480.0},{"device":"15 Pro 512GB","display":"15 Pro 512GB","price":510.0},{"device":"15 Pro 1TB","display":"15 Pro 1TB","price":540.0},{"device":"15 Plus 128GB","display":"15 Plus 128GB","price":370.0},{"device":"15 Plus 256GB","display":"15 Plus 256GB","price":420.0},{"device":"15 Plus 512GB","display":"15 Plus 512GB","price":450.0},{"device":"15 128GB","display":"15 128GB","price":340.0},{"device":"15  256GB","display":"15 256GB","price":370.0},{"device":"15  512GB","display":"15 512GB","price":400.0},{"device":"14 Pro Max 128GB","display":"14 Pro Max 128GB","price":430.0},{"device":"14 Pro Max 256GB","display":"14 Pro Max 256GB","price":460.0},{"device":"14 Pro Max 512GB","display":"14 Pro Max 512GB","price":490.0},{"device":"14 Pro Max 1TB","display":"14 Pro Max 1TB","price":520.0},{"device":"14 Pro 128GB","display":"14 Pro 128GB","price":330.0},{"device":"14 Pro 256GB","display":"14 Pro 256GB","price":360.0},{"device":"14 Pro 512GB","display":"14 Pro 512GB","price":380.0},{"device":"14 Pro 1TB","display":"14 Pro 1TB","price":400.0},{"device":"14 Plus 128GB","display":"14 Plus 128GB","price":260.0},{"device":"14 Plus 256GB","display":"14 Plus 256GB","price":290.0},{"device":"14 Plus 512GB","display":"14 Plus 512GB","price":320.0},{"device":"14  128GB","display":"14 128GB","price":210.0},{"device":"14  256GB","display":"14 256GB","price":240.0},{"device":"14  512GB","display":"14 512GB","price":270.0},{"device":"13 Pro Max 128GB","display":"13 Pro Max 128GB","price":290.0},{"device":"13 Pro Max 256GB","display":"13 Pro Max 256GB","price":320.0},{"device":"13 Pro Max 512GB","display":"13 Pro Max 512GB","price":350.0},{"device":"13 Pro Max 1TB","display":"13 Pro Max 1TB","price":380.0},{"device":"13 Pro 128GB","display":"13 Pro 128GB","price":210.0},{"device":"13 Pro 256GB","display":"13 Pro 256GB","price":240.0},{"device":"13 Pro 512GB","display":"13 Pro 512GB","price":270.0},{"device":"13 Pro TB","display":"13 Pro TB","price":300.0},{"device":"13 128GB","display":"13 128GB","price":190.0},{"device":"13  256GB","display":"13 256GB","price":220.0},{"device":"13  512GB","display":"13 512GB","price":250.0},{"device":"13  Mini 128GB","display":"13 Mini 128GB","price":170.0},{"device":"13  Mini 256GB","display":"13 Mini 256GB","price":210.0},{"device":"13  Mini 512GB","display":"13 Mini 512GB","price":230.0},{"device":"SE 3nd 64GB","display":"SE 3nd 64GB","price":70.0},{"device":"SE 3nd 128GB","display":"SE 3nd 128GB","price":110.0},{"device":"SE 3nd 256GB","display":"SE 3nd 256GB","price":150.0},{"device":"12 Pro Max 128GB","display":"12 Pro Max 128GB","price":240.0},{"device":"12 Pro Max 256GB","display":"12 Pro Max 256GB","price":270.0},{"device":"12 Pro Max 512GB","display":"12 Pro Max 512GB","price":300.0},{"device":"12 Pro 128GB","display":"12 Pro 128GB","price":170.0},{"device":"12 Pro 256GB","display":"12 Pro 256GB","price":200.0},{"device":"12 Pro 512GB","display":"12 Pro 512GB","price":230.0},{"device":"12 64GB","display":"12 64GB","price":100.0},{"device":"12 128GB","display":"12 128GB","price":130.0},{"device":"12 256GB","display":"12 256GB","price":150.0},{"device":"12  Mini 64GB","display":"12 Mini 64GB","price":90.0},{"device":"12  Mini 128GB","display":"12 Mini 128GB","price":120.0},{"device":"12  Mini 256GB","display":"12 Mini 256GB","price":140.0},{"device":"11 Pro Max 64GB","display":"11 Pro Max 64GB","price":120.0},{"device":"11 Pro Max 256GB","display":"11 Pro Max 256GB","price":150.0},{"device":"11 Pro Max 512GB","display":"11 Pro Max 512GB","price":170.0},{"device":"11 Pro 64GB","display":"11 Pro 64GB","price":80.0},{"device":"11 Pro 256GB","display":"11 Pro 256GB","price":110.0},{"device":"11 Pro 512GB","display":"11 Pro 512GB","price":130.0},{"device":"11 64GB","display":"11 64GB","price":50.0},{"device":"11 128GB","display":"11 128GB","price":80.0},{"device":"11 256GB","display":"11 256GB","price":100.0}],"SAMSUNG NEW LOCKED":[{"device":"Z Fold7 TM/SP/VZN","display":"Z Fold7 Tm/sp/vzn","price":900.0},{"device":"Z Fold7 AT&T","display":"Z Fold7 At T","price":900.0},{"device":"Z Flip7 TM/SP/VZN","display":"Z Flip7 Tm/sp/vzn","price":440.0},{"device":"Z Flip7 AT&T","display":"Z Flip7 At T","price":440.0},{"device":"S25E TM/SP/VZN","display":"S25e Tm/sp/vzn","price":380.0},{"device":"S25E AT&T","display":"S25e At T","price":380.0},{"device":"S25U TM/SP/VZN","display":"S25u Tm/sp/vzn","price":505.0},{"device":"S25U AT&T","display":"S25u At T","price":505.0},{"device":"S25+ TM/SP/VZN","display":"S25+ Tm/sp/vzn","price":290.0},{"device":"S25+ AT&T","display":"S25+ At T","price":290.0},{"device":"S25 TM/SP/VZN","display":"S25 Tm/sp/vzn","price":230.0},{"device":"S25 AT&T","display":"S25 At T","price":230.0},{"device":"Z Fold 6 TM/SP/VZN","display":"Z Fold 6 Tm/sp/vzn","price":520.0},{"device":"Z Fold 6 AT&T","display":"Z Fold 6 At T","price":560.0},{"device":"Z Flip 6 TM/SP/VZN","display":"Z Flip 6 Tm/sp/vzn","price":210.0},{"device":"Z Flip 6 AT&T","display":"Z Flip 6 At T","price":250.0},{"device":"S24U TM/SP/VZN","display":"S24u Tm/sp/vzn","price":330.0},{"device":"S24U AT&T","display":"S24u At T","price":360.0},{"device":"S24+ TM/SP/VZN","display":"S24+ Tm/sp/vzn","price":160.0},{"device":"S24+ AT&T","display":"S24+ At T","price":190.0},{"device":"S24 TM/SP/VZN","display":"S24 Tm/sp/vzn","price":90.0},{"device":"S24 AT&T","display":"S24 At T","price":110.0},{"device":"S24FE TM/SP/VZN","display":"S24fe Tm/sp/vzn","price":100.0},{"device":"S24FE AT&T","display":"S24fe At T","price":100.0}],"SAMSUNG USED LOCKED":[{"device":"Z Fold7 TM/SP/VZN","display":"Z Fold7 Tm/sp/vzn","price":510.0},{"device":"Z Fold7 AT&T","display":"Z Fold7 At T","price":510.0},{"device":"Z Flip7 TM/SP/VZN","display":"Z Flip7 Tm/sp/vzn","price":260.0},{"device":"Z Flip7 AT&T","display":"Z Flip7 At T","price":260.0},{"device":"S25E TM/SP/VZN","display":"S25e Tm/sp/vzn","price":200.0},{"device":"S25E AT&T","display":"S25e At T","price":200.0},{"device":"S25U TM/SP/VZN","display":"S25u Tm/sp/vzn","price":290.0},{"device":"S25U AT&T","display":"S25u At T","price":290.0},{"device":"S25+ TM/SP/VZN","display":"S25+ Tm/sp/vzn","price":140.0},{"device":"S25+ AT&T","display":"S25+ At T","price":140.0},{"device":"S25 TM/SP/VZN","display":"S25 Tm/sp/vzn","price":100.0},{"device":"S25 AT&T","display":"S25 At T","price":100.0},{"device":"Z Fold 6 TM/SP/VZN","display":"Z Fold 6 Tm/sp/vzn","price":230.0},{"device":"Z Fold 6 AT&T","display":"Z Fold 6 At T","price":260.0},{"device":"Z Flip 6 TM/SP/VZN","display":"Z Flip 6 Tm/sp/vzn","price":80.0},{"device":"Z Flip 6 AT&T","display":"Z Flip 6 At T","price":110.0},{"device":"S24U TM/SP/VZN","display":"S24u Tm/sp/vzn","price":170.0},{"device":"S24U AT&T","display":"S24u At T","price":190.0}],"SAMSUNG NEW UNLOCKED":[{"device":"Z Fold7","display":"Z Fold7","price":1030.0},{"device":"Z Flip7","display":"Z Flip7","price":570.0},{"device":"S25E","display":"S25e","price":510.0},{"device":"S25U","display":"S25u","price":635.0},{"device":"S25+","display":"S25+","price":420.0},{"device":"S25","display":"S25","price":360.0},{"device":"Z Fold 6","display":"Z Fold 6","price":670.0},{"device":"Z Flip 6","display":"Z Flip 6","price":320.0},{"device":"S24U","display":"S24u","price":460.0},{"device":"S24+","display":"S24+","price":280.0},{"device":"S24","display":"S24","price":180.0}],"SAMSUNG USED UNLOCKED":[{"device":"Z Fold7","display":"Z Fold7","price":590.0},{"device":"Z Flip7","display":"Z Flip7","price":330.0},{"device":"S25E","display":"S25e","price":290.0},{"device":"S25U","display":"S25u","price":380.0},{"device":"S25+","display":"S25+","price":230.0},{"device":"S25","display":"S25","price":190.0},{"device":"Z Fold 6","display":"Z Fold 6","price":280.0},{"device":"Z Flip 6","display":"Z Flip 6","price":100.0},{"device":"S24U","display":"S24u","price":330.0},{"device":"S24+","display":"S24+","price":210.0},{"device":"S24","display":"S24","price":120.0},{"device":"Z Fold 5","display":"Z Fold 5","price":280.0},{"device":"Z Flip 5","display":"Z Flip 5","price":110.0},{"device":"S23U","display":"S23u","price":190.0}],"MACBOOKS":[{"device":"MC6T4 Sky Blue 16GB/256GB","display":"Mc6t4 Sky Blue 16GB/256GB","price":720.0},{"device":"MW0W3 Silver 16GB/256GB","display":"Mw0w3 Silver 16GB/256GB","price":720.0},{"device":"MW123 Midnight 16GB/256GB","display":"Mw123 Midnight 16GB/256GB","price":720.0},{"device":"MW0Y3 Starlight 16GB/256GB","display":"Mw0y3 Starlight 16GB/256GB","price":720.0},{"device":"MC6U4 Sky Blue 16GB/512GB","display":"Mc6u4 Sky Blue 16GB/512GB","price":880.0},{"device":"MW0X3 Silver 16GB/512GB","display":"Mw0x3 Silver 16GB/512GB","price":880.0},{"device":"MW133 Midnight 16GB/512GB","display":"Mw133 Midnight 16GB/512GB","price":880.0},{"device":"MW103 Starlight 16GB/512GB","display":"Mw103 Starlight 16GB/512GB","price":880.0},{"device":"MC6V4 Sky Blue 24GB/512GB","display":"Mc6v4 Sky Blue 24GB/512GB","price":1040.0},{"device":"MC654 Silver 24GB/512GB","display":"Mc654 Silver 24GB/512GB","price":1040.0},{"device":"MC6C4 Midnight 24GB/512GB","display":"Mc6c4 Midnight 24GB/512GB","price":1040.0},{"device":"MC6A4 Starlight 24GB/512GB","display":"Mc6a4 Starlight 24GB/512GB","price":1040.0},{"device":"MC7A4 Sky Blue 16GB/256GB","display":"Mc7a4 Sky Blue 16GB/256GB","price":880.0},{"device":"MW1G3 Silver 16GB/256GB","display":"Mw1g3 Silver 16GB/256GB","price":880.0},{"device":"MW1L3 Midnight 16GB/256GB","display":"Mw1l3 Midnight 16GB/256GB","price":880.0},{"device":"MW1J3 Starlight 16GB/256GB","display":"Mw1j3 Starlight 16GB/256GB","price":880.0},{"device":"MC7C4 Sky Blue 16GB/512GB","display":"Mc7c4 Sky Blue 16GB/512GB","price":1050.0},{"device":"MW1H3 Silver 16GB/512GB","display":"Mw1h3 Silver 16GB/512GB","price":1050.0},{"device":"MW1M3 Midnight 16GB/512GB","display":"Mw1m3 Midnight 16GB/512GB","price":1050.0},{"device":"MW1K3 Starlight 16GB/512GB","display":"Mw1k3 Starlight 16GB/512GB","price":1050.0},{"device":"MC7D4 Sky Blue 24GB/512GB","display":"Mc7d4 Sky Blue 24GB/512GB","price":1200.0},{"device":"MC6J4 Silver 24GB/512GB","display":"Mc6j4 Silver 24GB/512GB","price":1200.0},{"device":"MC6L4 Midnight 24GB/512GB","display":"Mc6l4 Midnight 24GB/512GB","price":1200.0},{"device":"MC6K4 Starlight 24GB/512GB","display":"Mc6k4 Starlight 24GB/512GB","price":1200.0},{"device":"MC8G4 Space Gray 16GB/256GB","display":"Mc8g4 Space Gray 16GB/256GB","price":620.0},{"device":"MC8H4 Silver 16GB/256GB","display":"Mc8h4 Silver 16GB/256GB","price":620.0},{"device":"MC8J4 Starlight 16GB/256GB","display":"Mc8j4 Starlight 16GB/256GB","price":620.0},{"device":"MC8K4 Midnight 16GB/256GB","display":"Mc8k4 Midnight 16GB/256GB","price":620.0},{"device":"MC8M4 Space Gray 24GB/512GB","display":"Mc8m4 Space Gray 24GB/512GB","price":920.0},{"device":"MC8N4 Silver 24GB/512GB","display":"Mc8n4 Silver 24GB/512GB","price":920.0},{"device":"MC8P4 Starlight 24GB/512GB","display":"Mc8p4 Starlight 24GB/512GB","price":920.0},{"device":"MC8Q4 Midnight 24GB/512GB","display":"Mc8q4 Midnight 24GB/512GB","price":920.0},{"device":"MC9D4 Space Gray 16GB/256GB","display":"Mc9d4 Space Gray 16GB/256GB","price":850.0},{"device":"MC9E4 Silver 16GB/256GB","display":"Mc9e4 Silver 16GB/256GB","price":850.0},{"device":"MC9F4 Starlight 16GB/256GB","display":"Mc9f4 Starlight 16GB/256GB","price":850.0},{"device":"MC9G4 Midnight 16GB/256GB","display":"Mc9g4 Midnight 16GB/256GB","price":850.0},{"device":"MC9H4 Space Gray 24GB/512GB","display":"Mc9h4 Space Gray 24GB/512GB","price":1000.0},{"device":"MC9H4 Silver 24GB/512GB","display":"Mc9h4 Silver 24GB/512GB","price":1000.0},{"device":"MC9K4 Starlight 24GB/512GB","display":"Mc9k4 Starlight 24GB/512GB","price":1000.0},{"device":"MC9L4 Midnight 24GB/512GB","display":"Mc9l4 Midnight 24GB/512GB","price":1000.0},{"device":"MC7U4 Space Gray 16GB/256GB","display":"Mc7u4 Space Gray 16GB/256GB","price":580.0},{"device":"MC7V4 Silver 16GB/256GB","display":"Mc7v4 Silver 16GB/256GB","price":580.0},{"device":"MC7W4 Starlight 16GB/256GB","display":"Mc7w4 Starlight 16GB/256GB","price":580.0},{"device":"MC7X4 Midnight 16GB/256GB","display":"Mc7x4 Midnight 16GB/256GB","price":580.0},{"device":"MW2U3 16GB/512 GREY","display":"Mw2u3 16GB/512 Grey","price":1200.0},{"device":"MW2W3 16GB/512 SILVER","display":"Mw2w3 16GB/512 Silver","price":1200.0},{"device":"MW2V3 16GB/1TB SPACE","display":"Mw2v3 16GB/1TB Space","price":1330.0},{"device":"MW2X3 16GB/1TB SILVER","display":"Mw2x3 16GB/1TB Silver","price":1330.0},{"device":"MCX04 24GB/1TB SPACE","display":"Mcx04 24GB/1TB Space","price":1550.0},{"device":"MCX14 24GB/1TB SILVER","display":"Mcx14 24GB/1TB Silver","price":1500.0},{"device":"MX2H3 24GB/512GB SPACE GREY","display":"Mx2h3 24GB/512GB Space Grey","price":1500.0},{"device":"MX2E3 24GB/512GB SILVER","display":"Mx2e3 24GB/512GB Silver","price":1500.0},{"device":"MX2J3 24GB/1TBGB SPACE GREY","display":"Mx2j3 24GB/1TBGB Space Grey","price":1800.0},{"device":"MX2F3 24GB/1TBGB SILVER","display":"Mx2f3 24GB/1TBGB Silver","price":1800.0},{"device":"MX2K3 36GB/1TB SPACE GREY","display":"Mx2k3 36GB/1TB Space Grey","price":2000.0},{"device":"MX2G3 36GB/1TB SILVER","display":"Mx2g3 36GB/1TB Silver","price":2000.0},{"device":"MX2X3 24GB/512GB SPACE GREY","display":"Mx2x3 24GB/512GB Space Grey","price":1900.0},{"device":"MX2T3 24GB/512GB SILVER","display":"Mx2t3 24GB/512GB Silver","price":1900.0},{"device":"MX2Y3 48GB/512GB SPACE GREY","display":"Mx2y3 48GB/512GB Space Grey","price":2000.0},{"device":"MX2U3 48GB/512GBSILVER","display":"Mx2u3 48GB/512GBSILVER","price":2000.0},{"device":"MX303 36GB/1TB SPACE GREY","display":"Mx303 36GB/1TB Space Grey","price":2600.0},{"device":"MX2V3 36GB/1TB SILVER","display":"Mx2v3 36GB/1TB Silver","price":2600.0},{"device":"MX313 48GB/1TB SPACE GREY","display":"Mx313 48GB/1TB Space Grey","price":2950.0},{"device":"MX2W3 48GB/1TB SILVER","display":"Mx2w3 48GB/1TB Silver","price":2950.0},{"device":"MRXN3 MRXQ3 MRXT3 MRXV3 8GB/256GB","display":"Mrxn3 Mrxq3 Mrxt3 Mrxv3 8GB/256GB","price":630.0},{"device":"MRXP3 MRXR3 MRXU3 MRXW3 8GB/512GB","display":"Mrxp3 Mrxr3 Mrxu3 Mrxw3 8GB/512GB","price":750.0},{"device":"MXCR3 MXCT3 MXCU3 MXCV3 16GB/512GB","display":"Mxcr3 Mxct3 Mxcu3 Mxcv3 16GB/512GB","price":830.0},{"device":"MRYM3 MRYP3 MRYR3 MRYU3 8GB/256GB","display":"Mrym3 Mryp3 Mryr3 Mryu3 8GB/256GB","price":730.0},{"device":"MRYN3 MRYQ3 MRYT3 MRYV3 8GB/512GB","display":"Mryn3 Mryq3 Mryt3 Mryv3 8GB/512GB","price":830.0},{"device":"MXD13 MXD23 MXD33 MXD43 16GB/512GB","display":"Mxd13 Mxd23 Mxd33 Mxd43 16GB/512GB","price":930.0},{"device":"MTL73 10C/8GB/512GB/Space Gray (M3)","display":"Mtl73 10C/8GB/512GB/Space Gray M3","price":930.0},{"device":"MR7J3 10C/8GB/512GB/Silver (M3)","display":"Mr7j3 10C/8GB/512GB/Silver M3","price":930.0},{"device":"MXE03 10C/16GB/1TB/Silver (M3)","display":"Mxe03 10C/16GB/1TB/Silver M3","price":1040.0},{"device":"MTL83 10C/8GB/1TB/Space Gray(M3)","display":"Mtl83 10C/8GB/1TB/Space Gray M3","price":1040.0},{"device":"MT7K3 10C/8GB/1TB/Silver(M3)","display":"Mt7k3 10C/8GB/1TB/Silver M3","price":1040.0},{"device":"MRX33 14C/18GB/512GB/Space Black (M3Pro)","display":"Mrx33 14C/18GB/512GB/Space Black M3pro","price":1240.0},{"device":"MRX63 14C/18GB/512GB/Silver (M3Pro)","display":"Mrx63 14C/18GB/512GB/Silver M3pro","price":1240.0},{"device":"MRX43 18C/18GB/1TB/ Space Black (M3Pro)","display":"Mrx43 18C/18GB/1TB/ Space Black M3pro","price":1560.0},{"device":"MRX73 18C/18GB/1TB/ Silver (M3Pro)","display":"Mrx73 18C/18GB/1TB/ Silver M3pro","price":1560.0},{"device":"MRX53 30C/36GB/1TB/Space Black(M3 Max)","display":"Mrx53 30C/36GB/1TB/Space Black M3 Max","price":1850.0},{"device":"MRX83 30C/36GB/1TB/Silver(M3 Max)","display":"Mrx83 30C/36GB/1TB/Silver M3 Max","price":1850.0},{"device":"MRW13 18C/18GB/512GB/Space Black(M3 Pro)","display":"Mrw13 18C/18GB/512GB/Space Black M3 Pro","price":1600.0},{"device":"MRW43 18C/18GB/512GB/Silver(M3 Pro)","display":"Mrw43 18C/18GB/512GB/Silver M3 Pro","price":1600.0},{"device":"MRW23 18C/36GB/512GB/Space Black(M3 Pro)","display":"Mrw23 18C/36GB/512GB/Space Black M3 Pro","price":1800.0},{"device":"MRW63 18C/36GB/512GB/Silver(M3 Pro)","display":"Mrw63 18C/36GB/512GB/Silver M3 Pro","price":1800.0},{"device":"MRW33 30C/36GB/1TB/Space Black(M3 Max)","display":"Mrw33 30C/36GB/1TB/Space Black M3 Max","price":2100.0},{"device":"MRW73 30C/36GB/1TB/SILVER(M3 Max)","display":"Mrw73 30C/36GB/1TB/SILVER M3 Max","price":2100.0},{"device":"MUW63 40C/48GB/1TB/Space Black(M3 Max)","display":"Muw63 40C/48GB/1TB/Space Black M3 Max","price":2200.0},{"device":"MUW73 40C/48GB/1TB/SILVER(M3 Max)","display":"Muw73 40C/48GB/1TB/SILVER M3 Max","price":2200.0},{"device":"MLY13 8C/8GB/256GB Starlight","display":"Mly13 8C/8GB/256GB Starlight","price":530.0},{"device":"MLXW3 8C/8GB/256GB SpaceGray","display":"Mlxw3 8C/8GB/256GB Spacegray","price":530.0},{"device":"MLXY3 8C/8GB/256GB Silver","display":"Mlxy3 8C/8GB/256GB Silver","price":530.0},{"device":"MLY33 8C/8GB/256GB Midnight","display":"Mly33 8C/8GB/256GB Midnight","price":530.0},{"device":"MLY23 8C/8GB/512GB Starlight","display":"Mly23 8C/8GB/512GB Starlight","price":630.0},{"device":"MLXX3 8C/8GB/512GB SpaceGray","display":"Mlxx3 8C/8GB/512GB Spacegray","price":630.0},{"device":"MLY03 8C/8GB/512GB Silver","display":"Mly03 8C/8GB/512GB Silver","price":630.0},{"device":"MLY43 8C/8GB/512GB Midnight","display":"Mly43 8C/8GB/512GB Midnight","price":630.0},{"device":"MGN63LL/A 8GB/ 256GB Gray","display":"Mgn63ll/a 8GB/ 256GB Gray","price":450.0},{"device":"MGN93LL/A 8GB/256GB Silver","display":"Mgn93ll/a 8GB/256GB Silver","price":450.0},{"device":"MGND3LL/A 8GB/256GB Gold","display":"Mgnd3ll/a 8GB/256GB Gold","price":450.0}],"IPAD":[{"device":"iPad A16 128GB Wi-Fi / VZW","display":"iPad A16 128GB Wi-fi / Vzw","price":240.0},{"device":"iPad A16 256GB Wi-Fi / VZW","display":"iPad A16 256GB Wi-fi / Vzw","price":320.0},{"device":"iPad A16 512GB Wi-Fi / VZW","display":"iPad A16 512GB Wi-fi / Vzw","price":430.0},{"device":"iPad A16 128GB Cellular","display":"iPad A16 128GB Cellular","price":330.0},{"device":"iPad A16 256GB Cellular","display":"iPad A16 256GB Cellular","price":450.0},{"device":"iPad A16 512GB Cellular","display":"iPad A16 512GB Cellular","price":580.0},{"device":"iPad Air 11\" (M3) 128GB Wi-Fi / VZW","display":"iPad Air 11 M3 128GB Wi-fi / Vzw","price":400.0},{"device":"iPad Air 11\" (M3) 256GB Wi-Fi / VZW","display":"iPad Air 11 M3 256GB Wi-fi / Vzw","price":510.0},{"device":"iPad Air 11\" (M3) 512GB Wi-Fi / VZW","display":"iPad Air 11 M3 512GB Wi-fi / Vzw","price":610.0},{"device":"iPad Air 11\" (M3) 1TB Wi-Fi / VZW","display":"iPad Air 11 M3 1TB Wi-fi / Vzw","price":700.0},{"device":"iPad Air 11\" (M3) 128GB Cellular","display":"iPad Air 11 M3 128GB Cellular","price":560.0},{"device":"iPad Air 11\" (M3) 256GB Cellular","display":"iPad Air 11 M3 256GB Cellular","price":660.0},{"device":"iPad Air 11\" (M3) 512GB Cellular","display":"iPad Air 11 M3 512GB Cellular","price":760.0},{"device":"iPad Air 11\" (M3) 1TB Cellular","display":"iPad Air 11 M3 1TB Cellular","price":800.0},{"device":"iPad Air 2024 13\" (M3) 128GB Wi-Fi / VZW","display":"iPad Air 2024 13 M3 128GB Wi-fi / Vzw","price":580.0},{"device":"iPad Air 2024 13\" (M3) 256GB Wi-Fi / VZW","display":"iPad Air 2024 13 M3 256GB Wi-fi / Vzw","price":680.0},{"device":"iPad Air 2024 13\" (M3) 512GB  Wi-Fi / VZW","display":"iPad Air 2024 13 M3 512GB Wi-fi / Vzw","price":730.0},{"device":"iPad Air 2024 13\" (M3) 1TB Wi-Fi / VZW","display":"iPad Air 2024 13 M3 1TB Wi-fi / Vzw","price":780.0},{"device":"iPad Air 2024 13\" (M3) 128GB Cellular","display":"iPad Air 2024 13 M3 128GB Cellular","price":630.0},{"device":"iPad Air 2024 13\" (M3) 256GB Cellular","display":"iPad Air 2024 13 M3 256GB Cellular","price":730.0},{"device":"iPad Air 2024 13\" (M3) 512GB Cellular","display":"iPad Air 2024 13 M3 512GB Cellular","price":780.0},{"device":"iPad Air 2024 13\" (M3) 1TB Cellular","display":"iPad Air 2024 13 M3 1TB Cellular","price":800.0},{"device":"iPad Pro 13\" (M4) 256GB Wi-Fi / VZW","display":"iPad Pro 13 M4 256GB Wi-fi / Vzw","price":930.0},{"device":"iPad Pro 13\" (M4) 512GB Wi-Fi / VZW","display":"iPad Pro 13 M4 512GB Wi-fi / Vzw","price":1120.0},{"device":"iPad Pro 13\" (M4) 1TB Wi-Fi / VZW","display":"iPad Pro 13 M4 1TB Wi-fi / Vzw","price":1340.0},{"device":"iPad Pro 13\" (M4) 2TB Wi-Fi / VZW","display":"iPad Pro 13 M4 2TB Wi-fi / Vzw","price":1440.0},{"device":"iPad Pro 13\" (M4) 256GB Cellular","display":"iPad Pro 13 M4 256GB Cellular","price":960.0},{"device":"iPad Pro 13\" (M4) 512GB Cellular","display":"iPad Pro 13 M4 512GB Cellular","price":1200.0},{"device":"iPad Pro 13\" (M4) 1TB Cellular","display":"iPad Pro 13 M4 1TB Cellular","price":1330.0},{"device":"iPad Pro 13\" (M4) 2TB Cellular","display":"iPad Pro 13 M4 2TB Cellular","price":1430.0},{"device":"iPad Pro 11\" (M4) 256GB Wi-Fi / VZW","display":"iPad Pro 11 M4 256GB Wi-fi / Vzw","price":750.0},{"device":"iPad Pro 11\" (M4) 512GB Wi-Fi / VZW","display":"iPad Pro 11 M4 512GB Wi-fi / Vzw","price":900.0},{"device":"iPad Pro 11\" (M4) 1TB Wi-Fi / VZW","display":"iPad Pro 11 M4 1TB Wi-fi / Vzw","price":1000.0},{"device":"iPad Pro 11\" (M4) 2TB Wi-Fi / VZW","display":"iPad Pro 11 M4 2TB Wi-fi / Vzw","price":1100.0},{"device":"iPad Pro 11\" (M4) 256GB Cellular","display":"iPad Pro 11 M4 256GB Cellular","price":950.0},{"device":"iPad Pro 11\" (M4) 512GB Cellular","display":"iPad Pro 11 M4 512GB Cellular","price":1060.0},{"device":"iPad Pro 11\" (M4) 1TB Cellular","display":"iPad Pro 11 M4 1TB Cellular","price":1160.0},{"device":"iPad Pro 11\" (M4) 2TB Cellular","display":"iPad Pro 11 M4 2TB Cellular","price":1260.0},{"device":"IPAD MINI 7 128GB Wi-Fi / VZW","display":"iPad Mini 7 128GB Wi-fi / Vzw","price":310.0},{"device":"IPAD MINI 7 256GB Wi-Fi / VZW","display":"iPad Mini 7 256GB Wi-fi / Vzw","price":380.0},{"device":"IPAD MINI 7 128GB Cellular","display":"iPad Mini 7 128GB Cellular","price":450.0},{"device":"IPAD MINI 7 256GB Cellular","display":"iPad Mini 7 256GB Cellular","price":550.0},{"device":"iPad 10 64GB Wi-Fi / VZW","display":"iPad 10 64GB Wi-fi / Vzw","price":200.0},{"device":"iPad 10 256GB Wi-Fi / VZW","display":"iPad 10 256GB Wi-fi / Vzw","price":350.0},{"device":"iPad 10 64GB Cellular","display":"iPad 10 64GB Cellular","price":250.0},{"device":"iPad 10 256GB Cellular","display":"iPad 10 256GB Cellular","price":460.0}],"WATCHS & AIRPODS":[{"device":"SE2 40MM","display":"Se2 40MM","price":160.0},{"device":"SE2 44MM","display":"Se2 44MM","price":190.0},{"device":"S10 42MM","display":"S10 42MM","price":285.0},{"device":"S10 46MM","display":"S10 46MM","price":315.0},{"device":"Ultra 2 49MM Natural","display":"Ultra 2 49MM Natural","price":620.0},{"device":"Ultra 2 49MM Black","display":"Ultra 2 49MM Black","price":630.0},{"device":"AirPod 4TH(MXP63)","display":"Airpod 4TH Mxp63","price":90.0},{"device":"AirPod 4TH(MXP93)","display":"Airpod 4TH Mxp93","price":135.0},{"device":"AirPod Pro 2 (MTJV3) 2023","display":"Airpod Pro 2 Mtjv3 2023","price":155.0},{"device":"AirPod Max USBC","display":"Airpod Max Usbc","price":405.0},{"device":"Pencil Pro MX2D3","display":"Pencil Pro Mx2d3","price":90.0}]};
-const DEFAULT_RULES = {"1-100":30,"101-220":20,"221-300":15,"301-469":13,"470+":10}; // numeric % (back-compat)
-const DEFAULT_BUCKETS = [["1-100", 1, 100], ["101-220", 101, 220], ["221-300", 221, 300], ["301-469", 301, 469], ["470+", 470, Infinity]]; // [[label, lo, hi], ...]
-const PIN_SHA256 = "5db1fee4b5703808c48078a76768b155b421b210c0761cd6a5d223f4d99f1eaa";
+const DATASETS = __DATASETS__;
+const DEFAULT_RULES = __DEFAULTS__; // numeric % (back-compat)
+const DEFAULT_BUCKETS = __PRICE_BUCKETS__; // [[label, lo, hi], ...]
+const PIN_SHA256 = "__PIN_SHA256__";
 
 // ==== THEMES ====
 const THEMES = [
@@ -665,4 +920,26 @@ render();
     </script>
     
 </body>
-</html>
+</html>"""
+
+    html = html.replace("__DATASETS__", dataset_js)
+    html = html.replace("__DEFAULTS__", defaults_js)
+    html = html.replace("__PRICE_BUCKETS__", price_buckets_js)
+    html = html.replace("__PIN_SHA256__", pin_sha256)
+
+    out_path.write_text(html, encoding="utf-8")
+
+def main():
+    cwd = Path('.').resolve()
+    print('[GSHEETS] mode active')
+    data = load_gsheet_tables()
+    if not data:
+        print('[FATAL] Google Sheets returned no data; check sharing/API key')
+        sys.exit(2)
+
+    out = cwd / "index.html"
+    build_html(data, PIN_SHA256, DEFAULT_RULES, out)
+    print(f"Wrote: {out}")
+
+if __name__ == "__main__":
+    main()
