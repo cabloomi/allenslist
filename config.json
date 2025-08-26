@@ -222,23 +222,23 @@
     },
     "IPAD": {
       "1-100": {
-        "pct": null,
+        "pct": 0,
         "flat": null
       },
       "101-220": {
-        "pct": null,
+        "pct": 0,
         "flat": null
       },
       "221-300": {
-        "pct": null,
+        "pct": 0,
         "flat": null
       },
       "301-469": {
-        "pct": null,
+        "pct": 0,
         "flat": null
       },
       "470+": {
-        "pct": 5,
+        "pct": 0,
         "flat": null
       }
     },
