@@ -2,13 +2,13 @@ name: Build & Deploy to Cloudflare Pages (every 30 min)
 
 on:
   schedule:
-    - cron: "*/30 * * * *"    # every 30 minutes (UTC)
-  workflow_dispatch:          # allow manual run
-  
+    - cron: "*/30 * * * *"   # every 30 minutes (UTC)
+  workflow_dispatch: {}
+
 permissions:
   contents: read
   deployments: write
-  
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -33,38 +33,29 @@ jobs:
           chmod +x ./run.command || true
           ./run.command || python generate_index.py
 
-      - name: Prepare site folder
+      - name: Prepare site folder (index + config + headers)
         run: |
           rm -rf _site
           mkdir -p _site
           cp -a index.html _site/
+          # include your runtime config + cache headers if present
+          [ -f config.json ] && cp -a config.json _site/ || true
+          [ -f _headers ] && cp -a _headers _site/ || true
 
-      - name: Publish to Cloudflare Pages
+      # (Optional) Fingerprint the build so you can confirm prod updated at a glance
+      - name: Stamp title with time/sha (optional)
+        run: |
+          TS="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          SHA="${GITHUB_SHA::7}"
+          sed -i "s|<title>Allens List</title>|<title>Allens List — ${TS} ${SHA}</title>|" _site/index.html || true
+
+      - name: Publish to Cloudflare Pages (Production)
         uses: cloudflare/pages-action@v1
         with:
           apiToken: 1i6MFwiicbFakRcKlUq0KF3ho88FMTDMuNGF-WZE
           accountId: c7b2bb3a435b4434235f331853e0bb5e
           projectName: allenslists
           directory: _site
+          branch: main                # must match your Pages “Production branch”
           gitHubToken: ${{ secrets.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 }}
-
-          - name: Deploy to Cloudflare Pages (Production)
-  uses: cloudflare/pages-action@v1
-  with:
-    apiToken: 1i6MFwiicbFakRcKlUq0KF3ho88FMTDMuNGF-WZE
-    accountId: c7b2bb3a435b4434235f331853e0bb5e
-    projectName: allenslists           # <- exact CF Pages project name
-    directory: .                       # <- this MUST contain index.html
-    branch: main                       # <- MUST match your CF Pages "Production branch"
-    gitHubToken: ${{ secrets.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 }}
-
-
-      # Optional: Purge Cloudflare cache if you serve a custom domain via the proxy
-      # (Uncomment this step and set CF_ZONE_ID secret to enable.)
-      # - name: Purge Cloudflare Cache (optional)
-      #   if: success() && secrets.CF_ZONE_ID != ''
-      #   run: |
-      #     curl -X POST "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/purge_cache" \
-      #       -H "Authorization: Bearer ${{ secrets.CF_API_TOKEN }}" \
-      #       -H "Content-Type: application/json" \
-      #       --data '{"purge_everything":true}'
+          wranglerVersion: "4"
