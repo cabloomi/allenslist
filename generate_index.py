@@ -988,7 +988,8 @@ render();
     except Exception as _e:
         print("[WARN] Failed to inject config loader:", _e)
     
-out_path.write_text(html, encoding="utf-8")
+    out_path.write_text(html, encoding="utf-8")
+
 
 def main():
     cwd = Path('.').resolve()
