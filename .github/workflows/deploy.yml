@@ -46,7 +46,18 @@ jobs:
           accountId: c7b2bb3a435b4434235f331853e0bb5e
           projectName: allenslists
           directory: _site
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          gitHubToken: ${{ secrets.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 }}
+
+          - name: Deploy to Cloudflare Pages (Production)
+  uses: cloudflare/pages-action@v1
+  with:
+    apiToken: 1i6MFwiicbFakRcKlUq0KF3ho88FMTDMuNGF-WZE
+    accountId: c7b2bb3a435b4434235f331853e0bb5e
+    projectName: allenslists           # <- exact CF Pages project name
+    directory: .                       # <- this MUST contain index.html
+    branch: main                       # <- MUST match your CF Pages "Production branch"
+    gitHubToken: ${{ secrets.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 }}
+
 
       # Optional: Purge Cloudflare cache if you serve a custom domain via the proxy
       # (Uncomment this step and set CF_ZONE_ID secret to enable.)
