@@ -244,23 +244,23 @@
     },
     "WATCHS & AIRPODS": {
       "1-100": {
-        "pct": null,
+        "pct": 0,
         "flat": 20
       },
       "101-220": {
-        "pct": null,
+        "pct": 0,
         "flat": 30
       },
       "221-300": {
-        "pct": null,
+        "pct": 0,
         "flat": 40
       },
       "301-469": {
-        "pct": null,
+        "pct": 0,
         "flat": 40
       },
       "470+": {
-        "pct": null,
+        "pct": 0,
         "flat": 60
       }
     },
