@@ -358,7 +358,7 @@ def build_html(data: dict, pin_sha256: str, defaults: dict, out_path: Path):
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Allens List</title>
+<title>Allenslist.com</title>
 <style>
 :root{
   --bg:#050708; --panel:#0a0f0b; --panel-2:#0f1611; --accent:#00ff9c; --accent-2:#33ffb7;
