@@ -28,10 +28,9 @@ import urllib.request
 
 # === injected loader & boot constants ===
 CONFIG_LOADER_SNIPPET = r"""<script>
-  // Auto-injected config loader — with diagnostics & bucket sanitization
   (function(){
     const PRIMARY_URL = '/config.json';
-    const FALLBACK_URL = '/engine/config.json'; // tries if primary fails
+    const FALLBACK_URL = '/engine/config.json';
     const BUILD_ID = (window.__BUILD_ID__ || Date.now());
 
     function sanitizeBuckets(buckets){
@@ -66,45 +65,30 @@ CONFIG_LOADER_SNIPPET = r"""<script>
     async function fetchJSON(url){
       const u = url + (url.includes('?') ? '&' : '?') + 'v=' + encodeURIComponent(BUILD_ID);
       const res = await fetch(u, { cache: 'no-store' });
-      if (!res.ok) {
-        console.warn('[config] fetch failed', res.status, res.statusText, 'for', u);
-        throw new Error('HTTP '+res.status);
-      }
-      const json = await res.json();
-      console.info('[config] loaded from', url, json);
-      return json;
+      if (!res.ok) throw new Error('HTTP '+res.status);
+      return await res.json();
     }
 
     async function initEngineConfigFromServer(){
       let remote = null;
-      try {
-        remote = await fetchJSON(PRIMARY_URL);
-      } catch (e1) {
-        try { remote = await fetchJSON(FALLBACK_URL); } catch (e2) {}
-      }
-      if (!remote) {
-        console.warn('[config] no remote config applied (both URLs failed). Using localStorage defaults.');
-        return;
-      }
-      if (typeof getEngineConfig !== 'function' || typeof setEngineConfig !== 'function') {
-        console.warn('[config] engine getters/setters not found; cannot apply remote config.');
-        return;
-      }
+      try { remote = await fetchJSON(PRIMARY_URL); }
+      catch { try { remote = await fetchJSON(FALLBACK_URL); } catch(e){} }
+      if (!remote) { console.warn('[config] no remote config'); return; }
+      if (typeof getEngineConfig !== 'function' || typeof setEngineConfig !== 'function') return;
       const current = getEngineConfig();
       const merged = mergeConfig(current, remote);
       setEngineConfig(merged);
       window.__CONFIG_APPLIED__ = true;
       window.__CONFIG_SOURCE__ = remote;
-      console.info('[config] applied to engineConfigV1');
+      console.info('[config] applied');
     }
 
     window.initEngineConfigFromServer = initEngineConfigFromServer;
 
-    // quick debug helper
     window.dumpEngine = function(){
       try {
         const cur = (typeof getEngineConfig === 'function') ? getEngineConfig() : null;
-        console.log('---- DUMP ENGINE CONFIG ----\napplied:', !!window.__CONFIG_APPLIED__);
+        console.log('applied:', !!window.__CONFIG_APPLIED__);
         console.log('source:', window.__CONFIG_SOURCE__ || null);
         console.dir(cur);
         return cur;
@@ -113,19 +97,6 @@ CONFIG_LOADER_SNIPPET = r"""<script>
   })();
 </script>"""
 BOOT_ASYNC = """// Boot (patched to wait for config)
-
-def inject_config_loader(html: str) -> str:
-    """Injects the config loader snippet and replaces sync boot with async boot."""
-    import re as _re
-    if "initEngineConfigFromServer" not in html:
-        i = html.lower().rfind("</body>")
-        if i != -1:
-            html = html[:i] + "\n\n" + CONFIG_LOADER_SNIPPET + "\n\n" + html[i:]
-        else:
-            html = html + "\n\n" + CONFIG_LOADER_SNIPPET + "\n"
-    # Replace first occurrence of 'loadTheme(); render();' with async boot
-    html = _re.sub(r"loadTheme\(\);\s*render\(\);\s*", BOOT_ASYNC, html, count=1, flags=_re.IGNORECASE)
-    return html
 (async () => {
   try { loadTheme && loadTheme(); } catch(e){}
   async function waitFor(fn, timeoutMs=3000){
@@ -140,6 +111,19 @@ def inject_config_loader(html: str) -> str:
   try { render && render(); } catch(e){}
 })();
 """
+
+def inject_config_loader(html: str) -> str:
+    """Injects the config loader snippet and replaces sync boot with async boot."""
+    import re as _re
+    if "initEngineConfigFromServer" not in html:
+        i = html.lower().rfind("</body>")
+        if i != -1:
+            html = html[:i] + "\n\n" + CONFIG_LOADER_SNIPPET + "\n\n" + html[i:]
+        else:
+            html = html + "\n\n" + CONFIG_LOADER_SNIPPET + "\n"
+    # Replace first occurrence of 'loadTheme(); render();' with async boot
+    html = _re.sub(r"loadTheme\(\);\s*render\(\);\s*", BOOT_ASYNC, html, count=1, flags=_re.IGNORECASE)
+    return html
 
 try:
     import pandas as pd
