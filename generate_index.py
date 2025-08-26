@@ -107,112 +107,6 @@ DEFAULT_RULES = {
 }
 
 # Default buckets (editable in Engine Room; saved as cfg.buckets).
-
-# === Auto-injected config loader for /config.json ===
-CONFIG_LOADER_SNIPPET = r"""<script>
-  // Auto-injected config loader — with diagnostics & bucket sanitization
-  (function(){
-    const PRIMARY_URL = '/config.json';
-    const FALLBACK_URL = '/engine/config.json'; // tries if primary fails
-    const BUILD_ID = (window.__BUILD_ID__ || Date.now());
-
-    function sanitizeBuckets(buckets){
-      if (!Array.isArray(buckets)) return buckets;
-      try {
-        return buckets.map((arr) => {
-          if (!Array.isArray(arr)) return arr;
-          const label = String(arr[0]);
-          const lo = Number(arr[1]);
-          let hi = arr.length > 2 ? arr[2] : undefined;
-          if (hi === null || hi === "" || typeof hi === "undefined") hi = "Infinity";
-          return [label, lo, hi];
-        });
-      } catch(e) { console.warn('[config] bucket sanitize failed', e); return buckets; }
-    }
-
-    function mergeConfig(current, remote) {
-      const out = {
-        defaults: (current && current.defaults) || {},
-        perSheet: (current && current.perSheet) || {},
-        buckets: (current && current.buckets) || []
-      };
-      if (remote && typeof remote === 'object') {
-        if (remote.defaults && typeof remote.defaults === 'object') out.defaults = remote.defaults;
-        if (remote.perSheet && typeof remote.perSheet === 'object') out.perSheet = remote.perSheet;
-        if (Array.isArray(remote.buckets)) out.buckets = sanitizeBuckets(remote.buckets);
-        if (remote.uiTheme) { try { applyTheme(String(remote.uiTheme)); } catch(e){} }
-      }
-      return out;
-    }
-
-    async function fetchJSON(url){
-      const u = url + (url.includes('?') ? '&' : '?') + 'v=' + encodeURIComponent(BUILD_ID);
-      const res = await fetch(u, { cache: 'no-store' });
-      if (!res.ok) {
-        console.warn('[config] fetch failed', res.status, res.statusText, 'for', u);
-        throw new Error('HTTP '+res.status);
-      }
-      const json = await res.json();
-      console.info('[config] loaded from', url, json);
-      return json;
-    }
-
-    async function initEngineConfigFromServer(){
-      let remote = null;
-      try {
-        remote = await fetchJSON(PRIMARY_URL);
-      } catch (e1) {
-        try { remote = await fetchJSON(FALLBACK_URL); } catch (e2) {}
-      }
-      if (!remote) {
-        console.warn('[config] no remote config applied (both URLs failed). Using localStorage defaults.');
-        return;
-      }
-      if (typeof getEngineConfig !== 'function' || typeof setEngineConfig !== 'function') {
-        console.warn('[config] engine getters/setters not found; cannot apply remote config.');
-        return;
-      }
-      const current = getEngineConfig();
-      const merged = mergeConfig(current, remote);
-      setEngineConfig(merged);
-      window.__CONFIG_APPLIED__ = true;
-      window.__CONFIG_SOURCE__ = remote;
-      console.info('[config] applied to engineConfigV1');
-    }
-
-    window.initEngineConfigFromServer = initEngineConfigFromServer;
-
-    // quick debug helper
-    window.dumpEngine = function(){
-      try {
-        const cur = (typeof getEngineConfig === 'function') ? getEngineConfig() : null;
-        console.log('---- DUMP ENGINE CONFIG ----
-applied:', !!window.__CONFIG_APPLIED__);
-        console.log('source:', window.__CONFIG_SOURCE__ || null);
-        console.dir(cur);
-        return cur;
-      } catch(e) { console.error('dumpEngine error', e); return null; }
-    };
-  })();
-</script>""".strip()
-
-BOOT_ASYNC = """// Boot (patched to wait for config)
-(async () => {
-  try { loadTheme && loadTheme(); } catch(e){}
-  async function waitFor(fn, timeoutMs=3000){
-    const start = Date.now();
-    while (!window[fn]) {
-      if (Date.now() - start > timeoutMs) break;
-      await new Promise(r => setTimeout(r, 50));
-    }
-    if (window[fn]) { return await window[fn](); }
-  }
-  try { await waitFor('initEngineConfigFromServer', 3000); } catch(e){}
-  try { render && render(); } catch(e){}
-})();
-"""
-
-
 PRICE_BUCKETS = [
     ("1-100",       1,   100),
     ("101-220",     101, 220),
@@ -1033,22 +927,17 @@ render();
     html = html.replace("__PRICE_BUCKETS__", price_buckets_js)
     html = html.replace("__PIN_SHA256__", pin_sha256)
 
-    
-    # --- Patch HTML to load /config.json and wait for it on boot ---
-    try:
-        import re as _re_patch
-        if "initEngineConfigFromServer" not in html:
-            _i = html.lower().rfind("</body>")
-            if _i != -1:
-                html = html[:_i] + "\n" + CONFIG_LOADER_SNIPPET + "\n" + html[_i:]
-            else:
-                html = html + "\n" + CONFIG_LOADER_SNIPPET + "\n"
-        # replace synchronous boot with async boot
-        html = _re_patch.sub(r"loadTheme\(\);\s*render\(\);\s*", BOOT_ASYNC, html, count=1, flags=_re_patch.I)
-    except Exception as _e:
-        print("[WARN] Failed to inject config loader:", _e)
-    
-out_path.write_text(inject_config_loader(html), encoding="utf-8")
+    OUTPUT_DIR = os.environ.get("OUTPUT_DIR", ".")
+OUTPUT_HTML = os.environ.get("OUTPUT_HTML", "index.html")
+out_path = Path(OUTPUT_DIR) / OUTPUT_HTML
+out_path.parent.mkdir(parents=True, exist_ok=True)
+# ensure config loader is injected before writing
+try:
+    html_to_write = inject_config_loader(html)
+except NameError:
+    html_to_write = html
+out_path.write_text(html_to_write, encoding="utf-8")
+print(f"Wrote: {out_path}")
 
 def main():
     cwd = Path('.').resolve()
@@ -1064,19 +953,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-def inject_config_loader(html: str) -> str:
-    """ Injects the config loader into the HTML and replaces the sync boot with an async boot. """
-    import re as _re
-    # add the loader once
-    if "initEngineConfigFromServer" not in html:
-        i = html.lower().rfind("</body>")
-        if i != -1:
-            html = html[:i] + "\n\n" + CONFIG_LOADER_SNIPPET + "\n\n" + html[i:]
-        else:
-            html = html + "\n\n" + CONFIG_LOADER_SNIPPET + "\n"
-    # replace sync boot with async boot
-    html = _re.sub(r"loadTheme\(\);\s*render\(\);\s*", BOOT_ASYNC, html, count=1, flags=_re.IGNORECASE)
-    return html
-
