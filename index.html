@@ -527,7 +527,15 @@ exportBtn.addEventListener('click', ()=>{ const cfg=getEngineConfig(); downloadC
 // Boot (patched to wait for config)
 (async () => {
   try { loadTheme && loadTheme(); } catch(e){}
-  try { await initEngineConfigFromServer(); } catch(e){}
+  async function waitFor(fn, timeoutMs=3000){
+    const start = Date.now();
+    while (!window[fn]) {
+      if (Date.now() - start > timeoutMs) break;
+      await new Promise(r => setTimeout(r, 50));
+    }
+    if (window[fn]) { return await window[fn](); }
+  }
+  try { await waitFor('initEngineConfigFromServer', 3000); } catch(e){}
   try { render && render(); } catch(e){}
 })();
 </script>
@@ -669,37 +677,76 @@ exportBtn.addEventListener('click', ()=>{ const cfg=getEngineConfig(); downloadC
     </script>
     
 
+
 <script>
-  // Auto-injected config loader — do not remove
-  const CONFIG_URL = '/config.json';
-  const BUILD_ID = (window.__BUILD_ID__ || Date.now());
+  (function(){
+    const PRIMARY_URL = '/config.json';
+    const FALLBACK_URL = '/engine/config.json';
+    const BUILD_ID = (window.__BUILD_ID__ || Date.now());
 
-  function mergeConfig(current, remote) {
-    const out = {
-      defaults: (current && current.defaults) || {},
-      perSheet: (current && current.perSheet) || {},
-      buckets: (current && current.buckets) || []
-    };
-    if (remote && typeof remote === 'object') {
-      if (remote.defaults && typeof remote.defaults === 'object') out.defaults = remote.defaults;
-      if (remote.perSheet && typeof remote.perSheet === 'object') out.perSheet = remote.perSheet;
-      if (Array.isArray(remote.buckets)) out.buckets = remote.buckets;
-      if (remote.uiTheme) { try { applyTheme(String(remote.uiTheme)); } catch(e){} }
+    function sanitizeBuckets(buckets){
+      if (!Array.isArray(buckets)) return buckets;
+      try {
+        return buckets.map((arr) => {
+          if (!Array.isArray(arr)) return arr;
+          const label = String(arr[0]);
+          const lo = Number(arr[1]);
+          let hi = arr.length > 2 ? arr[2] : undefined;
+          if (hi === null || hi === "" || typeof hi === "undefined") hi = "Infinity";
+          return [label, lo, hi];
+        });
+      } catch(e) { console.warn('[config] bucket sanitize failed', e); return buckets; }
     }
-    return out;
-  }
 
-  async function initEngineConfigFromServer(){
-    try{
-      const res = await fetch(CONFIG_URL + '?v=' + encodeURIComponent(BUILD_ID), { cache: 'no-store' });
-      if (!res.ok) return; // keep localStorage fallback
-      const remote = await res.json();
-      const current = (typeof getEngineConfig === 'function') ? getEngineConfig() : null;
-      if (!current) return;
+    function mergeConfig(current, remote) {
+      const out = {
+        defaults: (current && current.defaults) || {},
+        perSheet: (current && current.perSheet) || {},
+        buckets: (current && current.buckets) || []
+      };
+      if (remote && typeof remote === 'object') {
+        if (remote.defaults && typeof remote.defaults === 'object') out.defaults = remote.defaults;
+        if (remote.perSheet && typeof remote.perSheet === 'object') out.perSheet = remote.perSheet;
+        if (Array.isArray(remote.buckets)) out.buckets = sanitizeBuckets(remote.buckets);
+        if (remote.uiTheme) { try { applyTheme(String(remote.uiTheme)); } catch(e){} }
+      }
+      return out;
+    }
+
+    async function fetchJSON(url){
+      const u = url + (url.includes('?') ? '&' : '?') + 'v=' + encodeURIComponent(BUILD_ID);
+      const res = await fetch(u, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP '+res.status);
+      return await res.json();
+    }
+
+    async function initEngineConfigFromServer(){
+      let remote = null;
+      try { remote = await fetchJSON(PRIMARY_URL); }
+      catch { try { remote = await fetchJSON(FALLBACK_URL); } catch(e){} }
+      if (!remote) { console.warn('[config] no remote config'); return; }
+      if (typeof getEngineConfig !== 'function' || typeof setEngineConfig !== 'function') return;
+      const current = getEngineConfig();
       const merged = mergeConfig(current, remote);
-      if (typeof setEngineConfig === 'function') setEngineConfig(merged);
-    }catch(e){ console.warn('Config fetch failed', e); }
-  }
+      setEngineConfig(merged);
+      window.__CONFIG_APPLIED__ = true;
+      window.__CONFIG_SOURCE__ = remote;
+      console.info('[config] applied');
+    }
+
+    window.initEngineConfigFromServer = initEngineConfigFromServer;
+
+    window.dumpEngine = function(){
+      try {
+        const cur = (typeof getEngineConfig === 'function') ? getEngineConfig() : null;
+        console.log('applied:', !!window.__CONFIG_APPLIED__);
+        console.log('source:', window.__CONFIG_SOURCE__ || null);
+        console.dir(cur);
+        return cur;
+      } catch(e) { console.error('dumpEngine error', e); return null; }
+    };
+  })();
 </script>
+
 </body>
 </html>
