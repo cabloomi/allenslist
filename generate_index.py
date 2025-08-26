@@ -107,6 +107,52 @@ DEFAULT_RULES = {
 }
 
 # Default buckets (editable in Engine Room; saved as cfg.buckets).
+
+# === Auto-injected config loader for /config.json ===
+CONFIG_LOADER_SNIPPET = """
+<script>
+  // Auto-injected config loader — do not remove
+  const CONFIG_URL = '/config.json';
+  const BUILD_ID = (window.__BUILD_ID__ || Date.now());
+
+  function mergeConfig(current, remote) {
+    const out = {
+      defaults: (current && current.defaults) || {},
+      perSheet: (current && current.perSheet) || {},
+      buckets: (current && current.buckets) || []
+    };
+    if (remote && typeof remote === 'object') {
+      if (remote.defaults && typeof remote.defaults === 'object') out.defaults = remote.defaults;
+      if (remote.perSheet && typeof remote.perSheet === 'object') out.perSheet = remote.perSheet;
+      if (Array.isArray(remote.buckets)) out.buckets = remote.buckets;
+      if (remote.uiTheme) { try { applyTheme(String(remote.uiTheme)); } catch(e){} }
+    }
+    return out;
+  }
+
+  async function initEngineConfigFromServer(){
+    try{
+      const res = await fetch(CONFIG_URL + '?v=' + encodeURIComponent(BUILD_ID), { cache: 'no-store' });
+      if (!res.ok) return; // keep localStorage fallback
+      const remote = await res.json();
+      const current = (typeof getEngineConfig === 'function') ? getEngineConfig() : null;
+      if (!current) return;
+      const merged = mergeConfig(current, remote);
+      if (typeof setEngineConfig === 'function') setEngineConfig(merged);
+    }catch(e){ console.warn('Config fetch failed', e); }
+  }
+</script>
+""".strip()
+
+BOOT_ASYNC = """// Boot (patched to wait for config)
+(async () => {
+  try { loadTheme && loadTheme(); } catch(e){}
+  try { await initEngineConfigFromServer(); } catch(e){}
+  try { render && render(); } catch(e){}
+})();
+"""
+
+
 PRICE_BUCKETS = [
     ("1-100",       1,   100),
     ("101-220",     101, 220),
@@ -927,7 +973,22 @@ render();
     html = html.replace("__PRICE_BUCKETS__", price_buckets_js)
     html = html.replace("__PIN_SHA256__", pin_sha256)
 
-    out_path.write_text(html, encoding="utf-8")
+    
+    # --- Patch HTML to load /config.json and wait for it on boot ---
+    try:
+        import re as _re_patch
+        if "initEngineConfigFromServer" not in html:
+            _i = html.lower().rfind("</body>")
+            if _i != -1:
+                html = html[:_i] + "\n" + CONFIG_LOADER_SNIPPET + "\n" + html[_i:]
+            else:
+                html = html + "\n" + CONFIG_LOADER_SNIPPET + "\n"
+        # replace synchronous boot with async boot
+        html = _re_patch.sub(r"loadTheme\(\);\s*render\(\);\s*", BOOT_ASYNC, html, count=1, flags=_re_patch.I)
+    except Exception as _e:
+        print("[WARN] Failed to inject config loader:", _e)
+    
+out_path.write_text(html, encoding="utf-8")
 
 def main():
     cwd = Path('.').resolve()
