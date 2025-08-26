@@ -62,8 +62,8 @@
         "flat": null
       },
       "470+": {
-        "pct": null,
-        "flat": 5
+        "pct": 6,
+        "flat": null
       }
     },
     "IPHONE USED LOCKED": {
@@ -266,46 +266,46 @@
     },
     "GAMING": {
       "1-100": {
-        "pct": null,
-        "flat": null
+        "pct": 0,
+        "flat": 0
       },
       "101-220": {
-        "pct": null,
-        "flat": null
+        "pct": 0,
+        "flat": 0
       },
       "221-300": {
-        "pct": null,
-        "flat": null
+        "pct": 0,
+        "flat": 0
       },
       "301-469": {
-        "pct": null,
-        "flat": null
+        "pct": 0,
+        "flat": 0
       },
       "470+": {
-        "pct": null,
-        "flat": null
+        "pct": 0,
+        "flat": 0
       }
     },
     "TOOLS": {
       "1-100": {
-        "pct": null,
-        "flat": null
+        "pct": 0,
+        "flat": 0
       },
       "101-220": {
-        "pct": null,
-        "flat": null
+        "pct": 0,
+        "flat": 0
       },
       "221-300": {
-        "pct": null,
-        "flat": null
+        "pct": 0,
+        "flat": 0
       },
       "301-469": {
-        "pct": null,
-        "flat": null
+        "pct": 0,
+        "flat": 0
       },
       "470+": {
-        "pct": null,
-        "flat": null
+        "pct": 0,
+        "flat": 0
       }
     }
   },
