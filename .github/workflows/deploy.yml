@@ -2,23 +2,20 @@ name: Build & Deploy to Cloudflare Pages (every 30 min)
 
 on:
   schedule:
-    - cron: "*/30 * * * *"   # every 30 minutes (UTC)
+    - cron: "*/30 * * * *"
   workflow_dispatch: {}
 
 permissions:
-  contents: read
+  contents: write        # <-- allows committing back to the repo
   deployments: write
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -38,24 +35,30 @@ jobs:
           rm -rf _site
           mkdir -p _site
           cp -a index.html _site/
-          # include your runtime config + cache headers if present
           [ -f config.json ] && cp -a config.json _site/ || true
           [ -f _headers ] && cp -a _headers _site/ || true
 
-      # (Optional) Fingerprint the build so you can confirm prod updated at a glance
-      - name: Stamp title with time/sha (optional)
+      # >>> Commit generated index.html back to GitHub <<<
+      - name: Commit generated files
         run: |
-          TS="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-          SHA="${GITHUB_SHA::7}"
-          sed -i "s|<title>Allens List</title>|<title>Allens List — ${TS} ${SHA}</title>|" _site/index.html || true
+          set -e
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A index.html config.json _headers || true
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore: update generated index.html [skip ci]"
+            git push
+          fi
 
       - name: Publish to Cloudflare Pages (Production)
         uses: cloudflare/pages-action@v1
         with:
-          apiToken: 1i6MFwiicbFakRcKlUq0KF3ho88FMTDMuNGF-WZE
-          accountId: c7b2bb3a435b4434235f331853e0bb5e
+          apiToken: ${{ secrets.1i6MFwiicbFakRcKlUq0KF3ho88FMTDMuNGF-WZE }}
+          accountId: ${{ secrets.c7b2bb3a435b4434235f331853e0bb5e }}
           projectName: allenslists
           directory: _site
-          branch: main                # must match your Pages “Production branch”
+          branch: main
           gitHubToken: ${{ secrets.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 }}
           wranglerVersion: "4"
