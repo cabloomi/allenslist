@@ -40,7 +40,7 @@
         "flat": null
       },
       "470+": {
-        "pct": 4,
+        "pct": 6,
         "flat": null
       }
     },
@@ -62,7 +62,7 @@
         "flat": null
       },
       "470+": {
-        "pct": 6,
+        "pct": 4,
         "flat": null
       }
     },
@@ -216,7 +216,7 @@
         "flat": null
       },
       "470+": {
-        "pct": null,
+        "pct": 3,
         "flat": null
       }
     },
@@ -238,74 +238,74 @@
         "flat": null
       },
       "470+": {
-        "pct": null,
+        "pct": 5,
         "flat": null
       }
     },
     "WATCHS & AIRPODS": {
       "1-100": {
         "pct": null,
-        "flat": null
+        "flat": 20
       },
       "101-220": {
         "pct": null,
-        "flat": null
+        "flat": 30
       },
       "221-300": {
         "pct": null,
-        "flat": null
+        "flat": 40
       },
       "301-469": {
         "pct": null,
-        "flat": null
+        "flat": 40
       },
       "470+": {
         "pct": null,
-        "flat": null
+        "flat": 60
       }
     },
     "GAMING": {
       "1-100": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       },
       "101-220": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       },
       "221-300": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       },
       "301-469": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       },
       "470+": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       }
     },
     "TOOLS": {
       "1-100": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       },
       "101-220": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       },
       "221-300": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       },
       "301-469": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       },
       "470+": {
-        "pct": 0,
-        "flat": 0
+        "pct": null,
+        "flat": null
       }
     }
   },
