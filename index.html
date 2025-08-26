@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Allens List</title>
+<style>
+:root{
+  --bg:#050708; --panel:#0a0f0b; --panel-2:#0f1611; --accent:#00ff9c; --accent-2:#33ffb7;
+  --text:#d7ffe7; --muted:#72f7c6; --line:#10331f; --danger:#ff3b3b;
+  --font-body: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+/* 20 themes */
+body[data-theme="midnight-glass"]{ --bg:#0b1220; --panel:rgba(255,255,255,0.06); --panel-2:rgba(255,255,255,0.08); --accent:#60a5fa; --accent-2:#93c5fd; --text:#e7efff; --muted:#9db3d9; --line:rgba(148,163,184,0.25); --danger:#f87171; --font-body: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "SF Pro Text", Arial; }
+body[data-theme="clean-pro"]{ --bg:#0b0e11; --panel:#0f1419; --panel-2:#121922; --accent:#22d3ee; --accent-2:#67e8f9; --text:#e6f7ff; --muted:#9ad1de; --line:#1b2632; --danger:#f97373; --font-body: Inter, ui-sans-serif, system-ui; }
+body[data-theme="ivory-gold-luxe"]{ --bg:#0e0e0c; --panel:rgba(255,255,240,0.06); --panel-2:rgba(255,255,240,0.1); --accent:#f5d483; --accent-2:#ffe49b; --text:#fff8e7; --muted:#e6d6b3; --line:rgba(245,212,131,0.25); --danger:#ff8b73; --font-body: "SF Pro Text", ui-sans-serif; }
+body[data-theme="carbon-neon"]{ --bg:#0a0a0a; --panel:#121212; --panel-2:#171717; --accent:#22ff88; --accent-2:#55ff9f; --text:#d9fbe7; --muted:#9bf2c3; --line:#1e3626; --danger:#ff5a5a; --font-body:"JetBrains Mono",ui-monospace; }
+body[data-theme="deep-purple"]{ --bg:#0d0716; --panel:#150d22; --panel-2:#1b1230; --accent:#a78bfa; --accent-2:#c4b5fd; --text:#efe9ff; --muted:#b9a9f3; --line:#2a1c46; --danger:#ff6b6b; --font-body:"Inter",ui-sans-serif; }
+body[data-theme="forest-emerald"]{ --bg:#071410; --panel:#0b1a15; --panel-2:#0f241d; --accent:#10b981; --accent-2:#34d399; --text:#dbfff0; --muted:#94dbc0; --line:#173a2e; --danger:#f87171; --font-body:"Inter",ui-sans-serif; }
+body[data-theme="rose-quartz"]{ --bg:#140d11; --panel:#1b1318; --panel-2:#251820; --accent:#fb7185; --accent-2:#fda4af; --text:#ffe6eb; --muted:#f2b9c1; --line:#3a1f2a; --danger:#ff9393; --font-body:"Inter",ui-sans-serif; }
+body[data-theme="sunset-gold"]{ --bg:#120e09; --panel:#1a140d; --panel-2:#21190f; --accent:#f59e0b; --accent-2:#fbbf24; --text:#fff2d9; --muted:#e9c89a; --line:#3a2a11; --danger:#ff7a7a; --font-body:"Inter",ui-sans-serif; }
+body[data-theme="ocean-breeze"]{ --bg:#07131a; --panel:#0a1a24; --panel-2:#0e2430; --accent:#38bdf8; --accent-2:#7dd3fc; --text:#e6f7ff; --muted:#a7d7f3; --line:#103245; --danger:#ff6b6b; --font-body:"Inter",ui-sans-serif; }
+body[data-theme="matte-black"]{ --bg:#0a0b0c; --panel:#0f1012; --panel-2:#131417; --accent:#9ca3af; --accent-2:#c7cbd1; --text:#e5e7eb; --muted:#aeb3bb; --line:#1c1e22; --danger:#ef4444; --font-body:"SF Pro Text",ui-sans-serif; }
+body[data-theme="slate-gray"]{ --bg:#0c0f12; --panel:#12161a; --panel-2:#171c21; --accent:#94a3b8; --accent-2:#cbd5e1; --text:#e2e8f0; --muted:#a8b0bd; --line:#1f2831; --danger:#f87171; --font-body:"Inter",ui-sans-serif; }
+body[data-theme="mocha"]{ --bg:#110c09; --panel:#1a130f; --panel-2:#221912; --accent:#d6a676; --accent-2:#edc9a3; --text:#fff1e2; --muted:#cfbaaa; --line:#3a2a1d; --danger:#ff7b6e; --font-body:"Inter",ui-sans-serif; }
+body[data-theme="arctic-ice"]{ --bg:#0b1014; --panel:rgba(255,255,255,0.05); --panel-2:rgba(255,255,255,0.08); --accent:#67e8f9; --accent-2:#a5f3fc; --text:#e6fbff; --muted:#b7e8f2; --line:rgba(135,206,235,0.28); --danger:#fb7185; --font-body:system-ui,-apple-system,Segoe UI,Roboto; }
+body[data-theme="neon-pop"]{ --bg:#070b0f; --panel:#0c1218; --panel-2:#111a22; --accent:#22d3ee; --accent-2:#a78bfa; --text:#e5faff; --muted:#b8d4ff; --line:#162230; --danger:#ff5a89; --font-body:"JetBrains Mono",ui-monospace; }
+body[data-theme="royal-indigo"]{ --bg:#0a0a1a; --panel:#100f26; --panel-2:#151232; --accent:#7c3aed; --accent-2:#a78bfa; --text:#ecebff; --muted:#b9b4f2; --line:#251d46; --danger:#ff6b7a; --font-body:Inter,ui-sans-serif; }
+body[data-theme="copper-sand"]{ --bg:#0f0d0b; --panel:#17130f; --panel-2:#1f1a13; --accent:#e07a5f; --accent-2:#f2cc8f; --text:#fff3e6; --muted:#ddc3a6; --line:#2a2219; --danger:#ff7a7a; --font-body:Inter,ui-sans-serif; }
+body[data-theme="aurora"]{ --bg:#0b0e1a; --panel:#11162a; --panel-2:#151c36; --accent:#34d399; --accent-2:#60a5fa; --text:#e9faff; --muted:#b0d4ff; --line:#1a2a4d; --danger:#fb7185; --font-body:Inter,ui-sans-serif; }
+body[data-theme="jade-mist"]{ --bg:#081311; --panel:#0d1b18; --panel-2:#10241f; --accent:#2dd4bf; --accent-2:#99f6e4; --text:#dcfffb; --muted:#a6e9df; --line:#133a34; --danger:#f87171; --font-body:Inter,ui-sans-serif; }
+body[data-theme="obsidian"]{ --bg:#070707; --panel:#0c0c0c; --panel-2:#121212; --accent:#22c55e; --accent-2:#86efac; --text:#f1f5f9; --muted:#9aa6b2; --line:#1c1c1c; --danger:#ef4444; --font-body:"JetBrains Mono",ui-monospace; }
+body[data-theme="paper-white"]{ --bg:#0c0d0f; --panel:rgba(255,255,255,0.06); --panel-2:rgba(255,255,255,0.1); --accent:#ffffff; --accent-2:#e5e7eb; --text:#f8fafc; --muted:#cbd5e1; --line:rgba(255,255,255,0.18); --danger:#f87171; --font-body:"SF Pro Text",ui-sans-serif; }
+
+body[data-theme] header, body[data-theme] .item, body[data-theme] .engine { backdrop-filter: blur(10px) saturate(140%); -webkit-backdrop-filter: blur(10px) saturate(140%); border:1px solid var(--line); }
+body[data-theme] h1{ text-shadow:0 0 18px color-mix(in oklab, var(--accent) 35%, transparent); }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font-family: var(--font-body, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace); }
+header { position:sticky; top:0; z-index:20; background:linear-gradient(180deg,rgba(0,0,0,.24),rgba(0,0,0,.15)); border-bottom:1px solid var(--line); padding:10px 14px; display:flex; align-items:center; gap:10px; }
+h1 { font-size:18px; margin:0; letter-spacing:1px; color:var(--accent); cursor:pointer; }
+h1:focus-visible{ outline:2px solid var(--accent); border-radius:6px; }
+header .btn { display:inline-flex; align-items:center; justify-content:center; padding:8px 12px; border-radius:10px; border:1px solid var(--line); background:var(--panel-2); color:var(--muted); text-decoration:none; font-size:14px; height:36px; }
+header .btn:hover { color:var(--text); border-color:var(--accent); }
+.phone { margin-left:auto; } .tg { margin-left:8px; } .tg-icon { display:block; }
+.pages { position:sticky; top:50px; z-index:15; padding:8px 10px; background:var(--panel); border-bottom:1px solid var(--line); }
+.pages select { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--panel-2); color:var(--text); font-size:14px; }
+.search { display:flex; gap:8px; padding:10px; background:var(--panel); border-bottom:1px solid var(--line); position:sticky; top:100px; z-index:14; }
+.search input { flex:1; padding:12px 14px; border-radius:10px; border:1px solid var(--line); background:var(--panel-2); color:var(--text); font-size:16px; outline:none; }
+.container { padding: 10px; } .section { display:none; } .section.active { display:block; }
+.list { display:flex; flex-direction:column; gap:8px; }
+.item { background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; }
+.item .name { font-size:15px; letter-spacing:.2px;} .item .price { font-weight:700; font-size:15px; color:var(--accent-2); text-shadow:0 0 6px rgba(0,0,0,.25);}
+.small { font-size:12px; opacity:.7; }
+.engine-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:flex-start; justify-content:center; z-index:100; overflow:auto; padding:20px 8px; }
+.engine { width:min(900px,95vw); background:var(--panel); border:1px solid var(--accent); border-radius:14px; padding:14px; box-shadow:0 0 24px rgba(0,0,0,.25); max-height:90vh; overflow:auto; }
+.engine h2 { margin:0 0 6px; color:var(--accent); font-size:18px; }
+.engine .row { display:grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap:8px; margin:8px 0; }
+.engine label { font-size:12px; color:var(--muted); }
+.engine input[type="number"], .engine input[type="text"]{ width:100%; padding:8px; border-radius:8px; border:1px solid var(--line); background:var(--panel-2); color:var(--text); }
+.engine .sheet-block { border:1px dashed var(--line); border-radius:12px; padding:12px; margin:10px 0; }
+.engine .actions { display:flex; gap:8px; justify-content:flex-end; position:sticky; bottom:0; background:var(--panel); padding-top:8px; margin-top:8px; }
+.engine button { padding:8px 12px; border-radius:10px; border:1px solid var(--line); background:var(--panel-2); color:var(--text); cursor:pointer; }
+.engine .danger { border-color:var(--danger); color:#fff; }
+.engine .pin { display:flex; gap:8px; align-items:center; margin:8px 0; } .engine .pin input { flex:1; } .engine .pin .ok { border-color:var(--accent); }
+footer { padding:28px 14px; color:var(--muted); opacity:.75; }
+@media (max-width:600px) { .engine .row { grid-template-columns:1fr 1fr; } }
+
+/* === Mobile opacity fix for sticky bars === */
+.pages { background: var(--bg) !important; z-index: 1001 !important; box-shadow: 0 6px 12px rgba(0,0,0,.15) !important; }
+.search { background: var(--bg) !important; z-index: 1000 !important; box-shadow: 0 6px 12px rgba(0,0,0,.12) !important; }
+.pages select, .search input { background-color: var(--panel-2) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.pages, .search { position: sticky; transform: translateZ(0); }
+
+</style>
+
+    <style>
+      .search-wrapper,
+      .search-bar,
+      .filters,
+      .dropdown,
+      .select,
+      .combo {
+        position: relative;
+        z-index: 100;
+      }
+      .engine-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.7);
+        backdrop-filter: blur(2px);
+        z-index: 10000;
+        display: none;
+      }
+      .engine-modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        max-width: 520px;
+        width: calc(100% - 32px);
+        background: #0b0f0b;
+        border: 1px solid #1aff6c55;
+        border-radius: 16px;
+        padding: 20px 18px;
+        z-index: 10001;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+      }
+      .engine-modal h3 {
+        color: #1aff6c;
+        margin: 0 0 8px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      .engine-modal input[type="password"] {
+        width: 100%;
+        background: #0c120c;
+        color: #e6ffe6;
+        border: 1px solid #1aff6c55;
+        border-radius: 10px;
+        padding: 10px 12px;
+        outline: none;
+      }
+      .engine-modal .row {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        justify-content: flex-end;
+      }
+      .btn {
+        border: 1px solid #1aff6c88;
+        background: #0b140b;
+        color: #caffca;
+        border-radius: 10px;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+      .btn:hover { border-color: #1aff6c; color: #e9ffe9; }
+    </style>
+    
+</head>
+<body data-theme="midnight-glass">
+<header>
+  <h1 id="titleBtn" role="button" tabindex="0" aria-label="Open Engine Room">Allens List</h1>
+  <a class="btn phone" href="tel:13135392838">(313) 539-2838</a>
+  <a class="btn tg" href="https://t.me/apple_pays" target="_blank" rel="noopener" aria-label="Telegram channel">
+    <svg class="tg-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <path d="M21.5 3.5L2.7 10.8c-.8.3-.8 1.4 0 1.6l4.8 1.5 1.8 5.6c.2.8 1.2.9 1.7.3l2.6-2.7 4.8 3.6c.6.4 1.5.1 1.7-.6l3.2-15.2c.2-.9-.6-1.6-1.4-1.4zM8.4 12.9l9.5-6.1c.2-.1.4.2.2.3l-7.7 7.2c-.2.2-.3.4-.3.6l-.3 2.1c0 .2-.4.2-.4 0L8.4 12.9z" fill="currentColor"/>
+    </svg>
+  </a>
+</header>
+<div class="pages"><select id="sheetSelect"></select></div>
+<div class="search">
+  <input id="search" placeholder="Search devices (e.g. '15 Pro 256')">
+</div>
+<div class="container" id="sections"></div>
+
+<div class="engine-overlay" id="engineOverlay" aria-hidden="true">
+  <div class="engine">
+    <h2>Engine Room</h2>
+    <div class="pin">
+      <label for="pinInput">Enter PIN to unlock settings</label>
+    </div>
+    <div class="pin">
+      <input id="pinInput" type="password" placeholder="PIN">
+      <button id="pinCheck" class="ok">Unlock</button>
+      <button id="pinClose">Close</button>
+    </div>
+    <div id="engineBody" style="display:none;">
+      <!-- THEME: dropdown only -->
+      <div class="sheet-block">
+        <label for="themeSelect"><b>Theme</b></label>
+        <select id="themeSelect" style="margin-left:8px; padding:6px; border-radius:8px; background:var(--panel-2); color:var(--text); border:1px solid var(--line);"></select>
+      </div>
+
+      <!-- BUCKETS: editable ranges -->
+      <div id="bucketsBlock" class="sheet-block">
+        <label><b>Price Buckets</b> (label + range). These control which %/$ rules apply.</label>
+        <div class="row" id="bucketsRow"></div>
+        <p class="small">Tip: Ensure ranges don't overlap and cover your typical prices.</p>
+      </div>
+
+      <p class="small">Set discounts per bucket. Leave blank to fallback to defaults.</p>
+      <div id="defaultsBlock" class="sheet-block">
+        <label><b>Default Rules</b> (% off and/or $ off)</label>
+        <div class="row" id="defaultsRow"></div>
+      </div>
+
+      <div id="sheetsBlock"></div>
+
+      <div class="actions">
+        <button id="saveEngine">💾 Save</button>
+        <button id="exportConfig">⬇️ Export Config</button>
+        <button id="resetEngine" class="danger">Reset to Defaults</button>
+        <button id="closeEngine">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="small">
+  We do not buy stolen or unlawfully obtained devices.
+</footer>
+
+<script>
+// ==== DATA ====
+const DATASETS = {"IPHONE NEW LOCKED":[{"device":"16 Pro Max 256GB","display":"16 Pro Max 256GB","price":710.0},{"device":"16 Pro Max 512GB","display":"16 Pro Max 512GB","price":810.0},{"device":"16 Pro Max 1TB","display":"16 Pro Max 1TB","price":900.0},{"device":"16 Pro 128GB","display":"16 Pro 128GB","price":550.0},{"device":"16 Pro 256GB","display":"16 Pro 256GB","price":650.0},{"device":"16 Pro 512GB","display":"16 Pro 512GB","price":730.0},{"device":"16 Pro 1TB","display":"16 Pro 1TB","price":800.0},{"device":"16 Plus 128GB","display":"16 Plus 128GB","price":430.0},{"device":"16 Plus 256GB","display":"16 Plus 256GB","price":490.0},{"device":"16 Plus 512GB","display":"16 Plus 512GB","price":575.0},{"device":"16E 128GB","display":"16E 128GB","price":220.0},{"device":"16E 256GB","display":"16E 256GB","price":270.0},{"device":"16E 512GB","display":"16E 512GB","price":330.0},{"device":"16 128GB","display":"16 128GB","price":395.0},{"device":"16 256GB","display":"16 256GB","price":475.0},{"device":"16 512GB","display":"16 512GB","price":520.0},{"device":"15 Pro Max 512GB","display":"15 Pro Max 512GB","price":620.0},{"device":"15 Pro Max 1TB","display":"15 Pro Max 1TB","price":690.0},{"device":"15 Pro 128GB","display":"15 Pro 128GB","price":440.0},{"device":"15 Pro 256GB","display":"15 Pro 256GB","price":500.0},{"device":"15 Pro 512GB","display":"15 Pro 512GB","price":580.0},{"device":"15 Pro 1TB","display":"15 Pro 1TB","price":640.0},{"device":"15 Plus 128GB","display":"15 Plus 128GB","price":330.0},{"device":"15 Plus 256GB","display":"15 Plus 256GB","price":410.0},{"device":"15 Plus 512GB","display":"15 Plus 512GB","price":460.0},{"device":"15 128GB","display":"15 128GB","price":270.0},{"device":"15 256GB","display":"15 256GB","price":350.0},{"device":"15 512GB","display":"15 512GB","price":410.0}],"IPHONE NEW UNLOCKED":[{"device":"16 Pro Max 256GB","display":"16 Pro Max 256GB","price":910.0},{"device":"16 Pro Max 256GB Desert","display":"16 Pro Max 256GB Desert","price":920.0},{"device":"16 Pro Max 512GB","display":"16 Pro Max 512GB","price":1100.0},{"device":"16 Pro Max 1TB","display":"16 Pro Max 1TB","price":1220.0},{"device":"16 Pro 128GB","display":"16 Pro 128GB","price":750.0},{"device":"16 Pro 256GB","display":"16 Pro 256GB","price":840.0},{"device":"16 Pro 512GB","display":"16 Pro 512GB","price":940.0},{"device":"16 Pro 1TB","display":"16 Pro 1TB","price":1040.0},{"device":"16 Plus 128GB","display":"16 Plus 128GB","price":600.0},{"device":"16 Plus 256GB","display":"16 Plus 256GB","price":690.0},{"device":"16 Plus 512GB","display":"16 Plus 512GB","price":740.0},{"device":"16 128GB","display":"16 128GB","price":550.0},{"device":"16 256GB","display":"16 256GB","price":620.0},{"device":"16 512GB","display":"16 512GB","price":650.0},{"device":"16E 128GB","display":"16E 128GB","price":320.0},{"device":"16E 256GB","display":"16E 256GB","price":400.0},{"device":"16E 512GB","display":"16E 512GB","price":490.0},{"device":"15 Pro Max 256GB","display":"15 Pro Max 256GB","price":810.0},{"device":"15 Pro Max 512GB","display":"15 Pro Max 512GB","price":890.0},{"device":"15 Pro Max 1TB","display":"15 Pro Max 1TB","price":920.0},{"device":"15 Pro 128GB","display":"15 Pro 128GB","price":680.0},{"device":"15 Pro 256GB","display":"15 Pro 256GB","price":780.0},{"device":"15 Pro 512GB","display":"15 Pro 512GB","price":810.0},{"device":"15 Pro 1TB","display":"15 Pro 1TB","price":860.0},{"device":"15 Plus 128GB","display":"15 Plus 128GB","price":480.0},{"device":"15 Plus 256GB","display":"15 Plus 256GB","price":560.0},{"device":"15 Plus 512GB","display":"15 Plus 512GB","price":600.0},{"device":"15 128GB","display":"15 128GB","price":460.0},{"device":"15 256GB","display":"15 256GB","price":520.0},{"device":"15 512GB","display":"15 512GB","price":550.0}],"IPHONE USED LOCKED":[{"device":"16 Pro Max 256GB","display":"16 Pro Max 256GB","price":610.0},{"device":"16 Pro Max 512GB","display":"16 Pro Max 512GB","price":670.0},{"device":"16 Pro Max 1TB","display":"16 Pro Max 1TB","price":700.0},{"device":"16 Pro 128GB","display":"16 Pro 128GB","price":450.0},{"device":"16 Pro 256GB","display":"16 Pro 256GB","price":510.0},{"device":"16 Pro 512GB","display":"16 Pro 512GB","price":540.0},{"device":"16 Pro 1TB","display":"16 Pro 1TB","price":570.0},{"device":"16 Plus 128GB","display":"16 Plus 128GB","price":330.0},{"device":"16 Plus 256GB","display":"16 Plus 256GB","price":370.0},{"device":"16 Plus 512GB","display":"16 Plus 512GB","price":400.0},{"device":"16 128GB","display":"16 128GB","price":300.0},{"device":"16 256GB","display":"16 256GB","price":335.0},{"device":"16 512GB","display":"16 512GB","price":370.0},{"device":"16E 128GB","display":"16E 128GB","price":140.0},{"device":"16E 256GB","display":"16E 256GB","price":190.0},{"device":"16E 512GB","display":"16E 512GB","price":210.0},{"device":"15 Pro Max 256GB","display":"15 Pro Max 256GB","price":445.0},{"device":"15 Pro Max 512GB","display":"15 Pro Max 512GB","price":485.0},{"device":"15 Pro Max 1TB","display":"15 Pro Max 1TB","price":505.0},{"device":"15 Pro 128GB","display":"15 Pro 128GB","price":320.0},{"device":"15 Pro 256GB","display":"15 Pro 256GB","price":360.0},{"device":"15 Pro 512GB","display":"15 Pro 512GB","price":380.0},{"device":"15 Pro 1TB","display":"15 Pro 1TB","price":400.0},{"device":"15 Plus 128GB","display":"15 Plus 128GB","price":235.0},{"device":"15 Plus 256GB","display":"15 Plus 256GB","price":275.0},{"device":"15 Plus 512GB","display":"15 Plus 512GB","price":285.0},{"device":"15 128GB","display":"15 128GB","price":210.0},{"device":"15 256GB","display":"15 256GB","price":250.0},{"device":"15 512GB","display":"15 512GB","price":270.0},{"device":"14 Pro Max 128GB","display":"14 Pro Max 128GB","price":290.0},{"device":"14 Pro Max 256GB","display":"14 Pro Max 256GB","price":305.0},{"device":"14 Pro Max 512GB","display":"14 Pro Max 512GB","price":315.0},{"device":"14 Pro Max 1TB","display":"14 Pro Max 1TB","price":325.0},{"device":"14 Pro 128GB","display":"14 Pro 128GB","price":250.0},{"device":"14 Pro 256GB","display":"14 Pro 256GB","price":265.0},{"device":"14 Pro 512GB","display":"14 Pro 512GB","price":275.0},{"device":"14 Pro 1TB","display":"14 Pro 1TB","price":285.0},{"device":"14 Plus 128GB","display":"14 Plus 128GB","price":100.0},{"device":"14 Plus 256GB","display":"14 Plus 256GB","price":120.0},{"device":"14 Plus 512GB","display":"14 Plus 512GB","price":130.0},{"device":"14 128GB","display":"14 128GB","price":100.0},{"device":"14 256GB","display":"14 256GB","price":120.0},{"device":"14 512GB","display":"14 512GB","price":130.0},{"device":"13 Pro Max 128GB","display":"13 Pro Max 128GB","price":180.0},{"device":"13 Pro Max 256GB","display":"13 Pro Max 256GB","price":190.0},{"device":"13 Pro Max 512GB","display":"13 Pro Max 512GB","price":210.0},{"device":"13 Pro Max 1TB","display":"13 Pro Max 1TB","price":220.0},{"device":"13 Pro 128GB","display":"13 Pro 128GB","price":140.0},{"device":"13 Pro 256GB","display":"13 Pro 256GB","price":150.0},{"device":"13 Pro 512GB","display":"13 Pro 512GB","price":160.0},{"device":"13 Pro 1TB","display":"13 Pro 1TB","price":170.0},{"device":"13  128GB","display":"13 128GB","price":70.0},{"device":"13  256GB","display":"13 256GB","price":80.0},{"device":"13  512GB","display":"13 512GB","price":90.0},{"device":"13 Mini 128GB","display":"13 Mini 128GB","price":70.0},{"device":"13 Mini 256GB","display":"13 Mini 256GB","price":80.0},{"device":"13 Mini 512GB","display":"13 Mini 512GB","price":90.0},{"device":"SE 3nd 64GB","display":"SE 3nd 64GB","price":15.0},{"device":"SE 3nd 128GB","display":"SE 3nd 128GB","price":15.0},{"device":"SE 3nd 256GB","display":"SE 3nd 256GB","price":15.0},{"device":"12 Pro Max 128GB","display":"12 Pro Max 128GB","price":55.0},{"device":"12 Pro Max 256GB","display":"12 Pro Max 256GB","price":65.0},{"device":"12 Pro Max 512GB","display":"12 Pro Max 512GB","price":75.0},{"device":"12 Pro 128GB","display":"12 Pro 128GB","price":55.0},{"device":"12 Pro 256GB","display":"12 Pro 256GB","price":60.0},{"device":"12 Pro 512GB","display":"12 Pro 512GB","price":70.0},{"device":"12 64GB","display":"12 64GB","price":15.0},{"device":"12 128GB","display":"12 128GB","price":20.0},{"device":"12 256GB","display":"12 256GB","price":20.0},{"device":"12 Mini 64GB","display":"12 Mini 64GB","price":15.0},{"device":"12 Mini 128GB","display":"12 Mini 128GB","price":20.0},{"device":"12 Mini 256GB","display":"12 Mini 256GB","price":20.0}],"IPHONE USED UNLOCKED":[{"device":"16 Pro Max 256GB","display":"16 Pro Max 256GB","price":770.0},{"device":"16 Pro Max 512GB","display":"16 Pro Max 512GB","price":830.0},{"device":"16 Pro Max 1TB","display":"16 Pro Max 1TB","price":860.0},{"device":"16 Pro 128GB","display":"16 Pro 128GB","price":600.0},{"device":"16 Pro 256GB","display":"16 Pro 256GB","price":650.0},{"device":"16 Pro 512GB","display":"16 Pro 512GB","price":700.0},{"device":"16 Pro 1TB","display":"16 Pro 1TB","price":730.0},{"device":"16 Plus 128GB","display":"16 Plus 128GB","price":470.0},{"device":"16 Plus 256GB","display":"16 Plus 256GB","price":500.0},{"device":"16 Plus 512GB","display":"16 Plus 512GB","price":520.0},{"device":"16 128GB","display":"16 128GB","price":420.0},{"device":"16  256GB","display":"16 256GB","price":450.0},{"device":"16  512GB","display":"16 512GB","price":470.0},{"device":"16E 128GB","display":"16E 128GB","price":250.0},{"device":"16E  256GB","display":"16E 256GB","price":290.0},{"device":"16E  512GB","display":"16E 512GB","price":320.0},{"device":"15 Pro Max 256GB","display":"15 Pro Max 256GB","price":580.0},{"device":"15 Pro Max 512GB","display":"15 Pro Max 512GB","price":610.0},{"device":"15 Pro Max 1TB","display":"15 Pro Max 1TB","price":640.0},{"device":"15 Pro 128GB","display":"15 Pro 128GB","price":450.0},{"device":"15 Pro 256GB","display":"15 Pro 256GB","price":480.0},{"device":"15 Pro 512GB","display":"15 Pro 512GB","price":510.0},{"device":"15 Pro 1TB","display":"15 Pro 1TB","price":540.0},{"device":"15 Plus 128GB","display":"15 Plus 128GB","price":370.0},{"device":"15 Plus 256GB","display":"15 Plus 256GB","price":420.0},{"device":"15 Plus 512GB","display":"15 Plus 512GB","price":450.0},{"device":"15 128GB","display":"15 128GB","price":340.0},{"device":"15  256GB","display":"15 256GB","price":370.0},{"device":"15  512GB","display":"15 512GB","price":400.0},{"device":"14 Pro Max 128GB","display":"14 Pro Max 128GB","price":430.0},{"device":"14 Pro Max 256GB","display":"14 Pro Max 256GB","price":460.0},{"device":"14 Pro Max 512GB","display":"14 Pro Max 512GB","price":490.0},{"device":"14 Pro Max 1TB","display":"14 Pro Max 1TB","price":520.0},{"device":"14 Pro 128GB","display":"14 Pro 128GB","price":330.0},{"device":"14 Pro 256GB","display":"14 Pro 256GB","price":360.0},{"device":"14 Pro 512GB","display":"14 Pro 512GB","price":380.0},{"device":"14 Pro 1TB","display":"14 Pro 1TB","price":400.0},{"device":"14 Plus 128GB","display":"14 Plus 128GB","price":260.0},{"device":"14 Plus 256GB","display":"14 Plus 256GB","price":290.0},{"device":"14 Plus 512GB","display":"14 Plus 512GB","price":320.0},{"device":"14  128GB","display":"14 128GB","price":210.0},{"device":"14  256GB","display":"14 256GB","price":240.0},{"device":"14  512GB","display":"14 512GB","price":270.0},{"device":"13 Pro Max 128GB","display":"13 Pro Max 128GB","price":290.0},{"device":"13 Pro Max 256GB","display":"13 Pro Max 256GB","price":320.0},{"device":"13 Pro Max 512GB","display":"13 Pro Max 512GB","price":350.0},{"device":"13 Pro Max 1TB","display":"13 Pro Max 1TB","price":380.0},{"device":"13 Pro 128GB","display":"13 Pro 128GB","price":210.0},{"device":"13 Pro 256GB","display":"13 Pro 256GB","price":240.0},{"device":"13 Pro 512GB","display":"13 Pro 512GB","price":270.0},{"device":"13 Pro TB","display":"13 Pro TB","price":300.0},{"device":"13 128GB","display":"13 128GB","price":190.0},{"device":"13  256GB","display":"13 256GB","price":220.0},{"device":"13  512GB","display":"13 512GB","price":250.0},{"device":"13  Mini 128GB","display":"13 Mini 128GB","price":170.0},{"device":"13  Mini 256GB","display":"13 Mini 256GB","price":210.0},{"device":"13  Mini 512GB","display":"13 Mini 512GB","price":230.0},{"device":"SE 3nd 64GB","display":"SE 3nd 64GB","price":70.0},{"device":"SE 3nd 128GB","display":"SE 3nd 128GB","price":110.0},{"device":"SE 3nd 256GB","display":"SE 3nd 256GB","price":150.0},{"device":"12 Pro Max 128GB","display":"12 Pro Max 128GB","price":240.0},{"device":"12 Pro Max 256GB","display":"12 Pro Max 256GB","price":270.0},{"device":"12 Pro Max 512GB","display":"12 Pro Max 512GB","price":300.0},{"device":"12 Pro 128GB","display":"12 Pro 128GB","price":170.0},{"device":"12 Pro 256GB","display":"12 Pro 256GB","price":200.0},{"device":"12 Pro 512GB","display":"12 Pro 512GB","price":230.0},{"device":"12 64GB","display":"12 64GB","price":100.0},{"device":"12 128GB","display":"12 128GB","price":130.0},{"device":"12 256GB","display":"12 256GB","price":150.0},{"device":"12  Mini 64GB","display":"12 Mini 64GB","price":90.0},{"device":"12  Mini 128GB","display":"12 Mini 128GB","price":120.0},{"device":"12  Mini 256GB","display":"12 Mini 256GB","price":140.0},{"device":"11 Pro Max 64GB","display":"11 Pro Max 64GB","price":120.0},{"device":"11 Pro Max 256GB","display":"11 Pro Max 256GB","price":150.0},{"device":"11 Pro Max 512GB","display":"11 Pro Max 512GB","price":170.0},{"device":"11 Pro 64GB","display":"11 Pro 64GB","price":80.0},{"device":"11 Pro 256GB","display":"11 Pro 256GB","price":110.0},{"device":"11 Pro 512GB","display":"11 Pro 512GB","price":130.0},{"device":"11 64GB","display":"11 64GB","price":50.0},{"device":"11 128GB","display":"11 128GB","price":80.0},{"device":"11 256GB","display":"11 256GB","price":100.0}],"SAMSUNG NEW LOCKED":[{"device":"Z Fold7 TM/SP/VZN","display":"Z Fold7 Tm/sp/vzn","price":900.0},{"device":"Z Fold7 AT&T","display":"Z Fold7 At T","price":900.0},{"device":"Z Flip7 TM/SP/VZN","display":"Z Flip7 Tm/sp/vzn","price":440.0},{"device":"Z Flip7 AT&T","display":"Z Flip7 At T","price":440.0},{"device":"S25E TM/SP/VZN","display":"S25e Tm/sp/vzn","price":380.0},{"device":"S25E AT&T","display":"S25e At T","price":380.0},{"device":"S25U TM/SP/VZN","display":"S25u Tm/sp/vzn","price":505.0},{"device":"S25U AT&T","display":"S25u At T","price":505.0},{"device":"S25+ TM/SP/VZN","display":"S25+ Tm/sp/vzn","price":290.0},{"device":"S25+ AT&T","display":"S25+ At T","price":290.0},{"device":"S25 TM/SP/VZN","display":"S25 Tm/sp/vzn","price":230.0},{"device":"S25 AT&T","display":"S25 At T","price":230.0},{"device":"Z Fold 6 TM/SP/VZN","display":"Z Fold 6 Tm/sp/vzn","price":520.0},{"device":"Z Fold 6 AT&T","display":"Z Fold 6 At T","price":560.0},{"device":"Z Flip 6 TM/SP/VZN","display":"Z Flip 6 Tm/sp/vzn","price":210.0},{"device":"Z Flip 6 AT&T","display":"Z Flip 6 At T","price":250.0},{"device":"S24U TM/SP/VZN","display":"S24u Tm/sp/vzn","price":330.0},{"device":"S24U AT&T","display":"S24u At T","price":360.0},{"device":"S24+ TM/SP/VZN","display":"S24+ Tm/sp/vzn","price":160.0},{"device":"S24+ AT&T","display":"S24+ At T","price":190.0},{"device":"S24 TM/SP/VZN","display":"S24 Tm/sp/vzn","price":90.0},{"device":"S24 AT&T","display":"S24 At T","price":110.0},{"device":"S24FE TM/SP/VZN","display":"S24fe Tm/sp/vzn","price":100.0},{"device":"S24FE AT&T","display":"S24fe At T","price":100.0}],"SAMSUNG USED LOCKED":[{"device":"Z Fold7 TM/SP/VZN","display":"Z Fold7 Tm/sp/vzn","price":510.0},{"device":"Z Fold7 AT&T","display":"Z Fold7 At T","price":510.0},{"device":"Z Flip7 TM/SP/VZN","display":"Z Flip7 Tm/sp/vzn","price":260.0},{"device":"Z Flip7 AT&T","display":"Z Flip7 At T","price":260.0},{"device":"S25E TM/SP/VZN","display":"S25e Tm/sp/vzn","price":200.0},{"device":"S25E AT&T","display":"S25e At T","price":200.0},{"device":"S25U TM/SP/VZN","display":"S25u Tm/sp/vzn","price":290.0},{"device":"S25U AT&T","display":"S25u At T","price":290.0},{"device":"S25+ TM/SP/VZN","display":"S25+ Tm/sp/vzn","price":140.0},{"device":"S25+ AT&T","display":"S25+ At T","price":140.0},{"device":"S25 TM/SP/VZN","display":"S25 Tm/sp/vzn","price":100.0},{"device":"S25 AT&T","display":"S25 At T","price":100.0},{"device":"Z Fold 6 TM/SP/VZN","display":"Z Fold 6 Tm/sp/vzn","price":230.0},{"device":"Z Fold 6 AT&T","display":"Z Fold 6 At T","price":260.0},{"device":"Z Flip 6 TM/SP/VZN","display":"Z Flip 6 Tm/sp/vzn","price":80.0},{"device":"Z Flip 6 AT&T","display":"Z Flip 6 At T","price":110.0},{"device":"S24U TM/SP/VZN","display":"S24u Tm/sp/vzn","price":170.0},{"device":"S24U AT&T","display":"S24u At T","price":190.0}],"SAMSUNG NEW UNLOCKED":[{"device":"Z Fold7","display":"Z Fold7","price":1030.0},{"device":"Z Flip7","display":"Z Flip7","price":570.0},{"device":"S25E","display":"S25e","price":510.0},{"device":"S25U","display":"S25u","price":635.0},{"device":"S25+","display":"S25+","price":420.0},{"device":"S25","display":"S25","price":360.0},{"device":"Z Fold 6","display":"Z Fold 6","price":670.0},{"device":"Z Flip 6","display":"Z Flip 6","price":320.0},{"device":"S24U","display":"S24u","price":460.0},{"device":"S24+","display":"S24+","price":280.0},{"device":"S24","display":"S24","price":180.0}],"SAMSUNG USED UNLOCKED":[{"device":"Z Fold7","display":"Z Fold7","price":590.0},{"device":"Z Flip7","display":"Z Flip7","price":330.0},{"device":"S25E","display":"S25e","price":290.0},{"device":"S25U","display":"S25u","price":380.0},{"device":"S25+","display":"S25+","price":230.0},{"device":"S25","display":"S25","price":190.0},{"device":"Z Fold 6","display":"Z Fold 6","price":280.0},{"device":"Z Flip 6","display":"Z Flip 6","price":100.0},{"device":"S24U","display":"S24u","price":330.0},{"device":"S24+","display":"S24+","price":210.0},{"device":"S24","display":"S24","price":120.0},{"device":"Z Fold 5","display":"Z Fold 5","price":280.0},{"device":"Z Flip 5","display":"Z Flip 5","price":110.0},{"device":"S23U","display":"S23u","price":190.0}],"MACBOOKS":[{"device":"MC6T4 Sky Blue 16GB/256GB","display":"Mc6t4 Sky Blue 16GB/256GB","price":720.0},{"device":"MW0W3 Silver 16GB/256GB","display":"Mw0w3 Silver 16GB/256GB","price":720.0},{"device":"MW123 Midnight 16GB/256GB","display":"Mw123 Midnight 16GB/256GB","price":720.0},{"device":"MW0Y3 Starlight 16GB/256GB","display":"Mw0y3 Starlight 16GB/256GB","price":720.0},{"device":"MC6U4 Sky Blue 16GB/512GB","display":"Mc6u4 Sky Blue 16GB/512GB","price":880.0},{"device":"MW0X3 Silver 16GB/512GB","display":"Mw0x3 Silver 16GB/512GB","price":880.0},{"device":"MW133 Midnight 16GB/512GB","display":"Mw133 Midnight 16GB/512GB","price":880.0},{"device":"MW103 Starlight 16GB/512GB","display":"Mw103 Starlight 16GB/512GB","price":880.0},{"device":"MC6V4 Sky Blue 24GB/512GB","display":"Mc6v4 Sky Blue 24GB/512GB","price":1040.0},{"device":"MC654 Silver 24GB/512GB","display":"Mc654 Silver 24GB/512GB","price":1040.0},{"device":"MC6C4 Midnight 24GB/512GB","display":"Mc6c4 Midnight 24GB/512GB","price":1040.0},{"device":"MC6A4 Starlight 24GB/512GB","display":"Mc6a4 Starlight 24GB/512GB","price":1040.0},{"device":"MC7A4 Sky Blue 16GB/256GB","display":"Mc7a4 Sky Blue 16GB/256GB","price":880.0},{"device":"MW1G3 Silver 16GB/256GB","display":"Mw1g3 Silver 16GB/256GB","price":880.0},{"device":"MW1L3 Midnight 16GB/256GB","display":"Mw1l3 Midnight 16GB/256GB","price":880.0},{"device":"MW1J3 Starlight 16GB/256GB","display":"Mw1j3 Starlight 16GB/256GB","price":880.0},{"device":"MC7C4 Sky Blue 16GB/512GB","display":"Mc7c4 Sky Blue 16GB/512GB","price":1050.0},{"device":"MW1H3 Silver 16GB/512GB","display":"Mw1h3 Silver 16GB/512GB","price":1050.0},{"device":"MW1M3 Midnight 16GB/512GB","display":"Mw1m3 Midnight 16GB/512GB","price":1050.0},{"device":"MW1K3 Starlight 16GB/512GB","display":"Mw1k3 Starlight 16GB/512GB","price":1050.0},{"device":"MC7D4 Sky Blue 24GB/512GB","display":"Mc7d4 Sky Blue 24GB/512GB","price":1200.0},{"device":"MC6J4 Silver 24GB/512GB","display":"Mc6j4 Silver 24GB/512GB","price":1200.0},{"device":"MC6L4 Midnight 24GB/512GB","display":"Mc6l4 Midnight 24GB/512GB","price":1200.0},{"device":"MC6K4 Starlight 24GB/512GB","display":"Mc6k4 Starlight 24GB/512GB","price":1200.0},{"device":"MC8G4 Space Gray 16GB/256GB","display":"Mc8g4 Space Gray 16GB/256GB","price":620.0},{"device":"MC8H4 Silver 16GB/256GB","display":"Mc8h4 Silver 16GB/256GB","price":620.0},{"device":"MC8J4 Starlight 16GB/256GB","display":"Mc8j4 Starlight 16GB/256GB","price":620.0},{"device":"MC8K4 Midnight 16GB/256GB","display":"Mc8k4 Midnight 16GB/256GB","price":620.0},{"device":"MC8M4 Space Gray 24GB/512GB","display":"Mc8m4 Space Gray 24GB/512GB","price":920.0},{"device":"MC8N4 Silver 24GB/512GB","display":"Mc8n4 Silver 24GB/512GB","price":920.0},{"device":"MC8P4 Starlight 24GB/512GB","display":"Mc8p4 Starlight 24GB/512GB","price":920.0},{"device":"MC8Q4 Midnight 24GB/512GB","display":"Mc8q4 Midnight 24GB/512GB","price":920.0},{"device":"MC9D4 Space Gray 16GB/256GB","display":"Mc9d4 Space Gray 16GB/256GB","price":850.0},{"device":"MC9E4 Silver 16GB/256GB","display":"Mc9e4 Silver 16GB/256GB","price":850.0},{"device":"MC9F4 Starlight 16GB/256GB","display":"Mc9f4 Starlight 16GB/256GB","price":850.0},{"device":"MC9G4 Midnight 16GB/256GB","display":"Mc9g4 Midnight 16GB/256GB","price":850.0},{"device":"MC9H4 Space Gray 24GB/512GB","display":"Mc9h4 Space Gray 24GB/512GB","price":1000.0},{"device":"MC9H4 Silver 24GB/512GB","display":"Mc9h4 Silver 24GB/512GB","price":1000.0},{"device":"MC9K4 Starlight 24GB/512GB","display":"Mc9k4 Starlight 24GB/512GB","price":1000.0},{"device":"MC9L4 Midnight 24GB/512GB","display":"Mc9l4 Midnight 24GB/512GB","price":1000.0},{"device":"MC7U4 Space Gray 16GB/256GB","display":"Mc7u4 Space Gray 16GB/256GB","price":580.0},{"device":"MC7V4 Silver 16GB/256GB","display":"Mc7v4 Silver 16GB/256GB","price":580.0},{"device":"MC7W4 Starlight 16GB/256GB","display":"Mc7w4 Starlight 16GB/256GB","price":580.0},{"device":"MC7X4 Midnight 16GB/256GB","display":"Mc7x4 Midnight 16GB/256GB","price":580.0},{"device":"MW2U3 16GB/512 GREY","display":"Mw2u3 16GB/512 Grey","price":1200.0},{"device":"MW2W3 16GB/512 SILVER","display":"Mw2w3 16GB/512 Silver","price":1200.0},{"device":"MW2V3 16GB/1TB SPACE","display":"Mw2v3 16GB/1TB Space","price":1330.0},{"device":"MW2X3 16GB/1TB SILVER","display":"Mw2x3 16GB/1TB Silver","price":1330.0},{"device":"MCX04 24GB/1TB SPACE","display":"Mcx04 24GB/1TB Space","price":1550.0},{"device":"MCX14 24GB/1TB SILVER","display":"Mcx14 24GB/1TB Silver","price":1500.0},{"device":"MX2H3 24GB/512GB SPACE GREY","display":"Mx2h3 24GB/512GB Space Grey","price":1500.0},{"device":"MX2E3 24GB/512GB SILVER","display":"Mx2e3 24GB/512GB Silver","price":1500.0},{"device":"MX2J3 24GB/1TBGB SPACE GREY","display":"Mx2j3 24GB/1TBGB Space Grey","price":1800.0},{"device":"MX2F3 24GB/1TBGB SILVER","display":"Mx2f3 24GB/1TBGB Silver","price":1800.0},{"device":"MX2K3 36GB/1TB SPACE GREY","display":"Mx2k3 36GB/1TB Space Grey","price":2000.0},{"device":"MX2G3 36GB/1TB SILVER","display":"Mx2g3 36GB/1TB Silver","price":2000.0},{"device":"MX2X3 24GB/512GB SPACE GREY","display":"Mx2x3 24GB/512GB Space Grey","price":1900.0},{"device":"MX2T3 24GB/512GB SILVER","display":"Mx2t3 24GB/512GB Silver","price":1900.0},{"device":"MX2Y3 48GB/512GB SPACE GREY","display":"Mx2y3 48GB/512GB Space Grey","price":2000.0},{"device":"MX2U3 48GB/512GBSILVER","display":"Mx2u3 48GB/512GBSILVER","price":2000.0},{"device":"MX303 36GB/1TB SPACE GREY","display":"Mx303 36GB/1TB Space Grey","price":2600.0},{"device":"MX2V3 36GB/1TB SILVER","display":"Mx2v3 36GB/1TB Silver","price":2600.0},{"device":"MX313 48GB/1TB SPACE GREY","display":"Mx313 48GB/1TB Space Grey","price":2950.0},{"device":"MX2W3 48GB/1TB SILVER","display":"Mx2w3 48GB/1TB Silver","price":2950.0},{"device":"MRXN3 MRXQ3 MRXT3 MRXV3 8GB/256GB","display":"Mrxn3 Mrxq3 Mrxt3 Mrxv3 8GB/256GB","price":630.0},{"device":"MRXP3 MRXR3 MRXU3 MRXW3 8GB/512GB","display":"Mrxp3 Mrxr3 Mrxu3 Mrxw3 8GB/512GB","price":750.0},{"device":"MXCR3 MXCT3 MXCU3 MXCV3 16GB/512GB","display":"Mxcr3 Mxct3 Mxcu3 Mxcv3 16GB/512GB","price":830.0},{"device":"MRYM3 MRYP3 MRYR3 MRYU3 8GB/256GB","display":"Mrym3 Mryp3 Mryr3 Mryu3 8GB/256GB","price":730.0},{"device":"MRYN3 MRYQ3 MRYT3 MRYV3 8GB/512GB","display":"Mryn3 Mryq3 Mryt3 Mryv3 8GB/512GB","price":830.0},{"device":"MXD13 MXD23 MXD33 MXD43 16GB/512GB","display":"Mxd13 Mxd23 Mxd33 Mxd43 16GB/512GB","price":930.0},{"device":"MTL73 10C/8GB/512GB/Space Gray (M3)","display":"Mtl73 10C/8GB/512GB/Space Gray M3","price":930.0},{"device":"MR7J3 10C/8GB/512GB/Silver (M3)","display":"Mr7j3 10C/8GB/512GB/Silver M3","price":930.0},{"device":"MXE03 10C/16GB/1TB/Silver (M3)","display":"Mxe03 10C/16GB/1TB/Silver M3","price":1040.0},{"device":"MTL83 10C/8GB/1TB/Space Gray(M3)","display":"Mtl83 10C/8GB/1TB/Space Gray M3","price":1040.0},{"device":"MT7K3 10C/8GB/1TB/Silver(M3)","display":"Mt7k3 10C/8GB/1TB/Silver M3","price":1040.0},{"device":"MRX33 14C/18GB/512GB/Space Black (M3Pro)","display":"Mrx33 14C/18GB/512GB/Space Black M3pro","price":1240.0},{"device":"MRX63 14C/18GB/512GB/Silver (M3Pro)","display":"Mrx63 14C/18GB/512GB/Silver M3pro","price":1240.0},{"device":"MRX43 18C/18GB/1TB/ Space Black (M3Pro)","display":"Mrx43 18C/18GB/1TB/ Space Black M3pro","price":1560.0},{"device":"MRX73 18C/18GB/1TB/ Silver (M3Pro)","display":"Mrx73 18C/18GB/1TB/ Silver M3pro","price":1560.0},{"device":"MRX53 30C/36GB/1TB/Space Black(M3 Max)","display":"Mrx53 30C/36GB/1TB/Space Black M3 Max","price":1850.0},{"device":"MRX83 30C/36GB/1TB/Silver(M3 Max)","display":"Mrx83 30C/36GB/1TB/Silver M3 Max","price":1850.0},{"device":"MRW13 18C/18GB/512GB/Space Black(M3 Pro)","display":"Mrw13 18C/18GB/512GB/Space Black M3 Pro","price":1600.0},{"device":"MRW43 18C/18GB/512GB/Silver(M3 Pro)","display":"Mrw43 18C/18GB/512GB/Silver M3 Pro","price":1600.0},{"device":"MRW23 18C/36GB/512GB/Space Black(M3 Pro)","display":"Mrw23 18C/36GB/512GB/Space Black M3 Pro","price":1800.0},{"device":"MRW63 18C/36GB/512GB/Silver(M3 Pro)","display":"Mrw63 18C/36GB/512GB/Silver M3 Pro","price":1800.0},{"device":"MRW33 30C/36GB/1TB/Space Black(M3 Max)","display":"Mrw33 30C/36GB/1TB/Space Black M3 Max","price":2100.0},{"device":"MRW73 30C/36GB/1TB/SILVER(M3 Max)","display":"Mrw73 30C/36GB/1TB/SILVER M3 Max","price":2100.0},{"device":"MUW63 40C/48GB/1TB/Space Black(M3 Max)","display":"Muw63 40C/48GB/1TB/Space Black M3 Max","price":2200.0},{"device":"MUW73 40C/48GB/1TB/SILVER(M3 Max)","display":"Muw73 40C/48GB/1TB/SILVER M3 Max","price":2200.0},{"device":"MLY13 8C/8GB/256GB Starlight","display":"Mly13 8C/8GB/256GB Starlight","price":530.0},{"device":"MLXW3 8C/8GB/256GB SpaceGray","display":"Mlxw3 8C/8GB/256GB Spacegray","price":530.0},{"device":"MLXY3 8C/8GB/256GB Silver","display":"Mlxy3 8C/8GB/256GB Silver","price":530.0},{"device":"MLY33 8C/8GB/256GB Midnight","display":"Mly33 8C/8GB/256GB Midnight","price":530.0},{"device":"MLY23 8C/8GB/512GB Starlight","display":"Mly23 8C/8GB/512GB Starlight","price":630.0},{"device":"MLXX3 8C/8GB/512GB SpaceGray","display":"Mlxx3 8C/8GB/512GB Spacegray","price":630.0},{"device":"MLY03 8C/8GB/512GB Silver","display":"Mly03 8C/8GB/512GB Silver","price":630.0},{"device":"MLY43 8C/8GB/512GB Midnight","display":"Mly43 8C/8GB/512GB Midnight","price":630.0},{"device":"MGN63LL/A 8GB/ 256GB Gray","display":"Mgn63ll/a 8GB/ 256GB Gray","price":450.0},{"device":"MGN93LL/A 8GB/256GB Silver","display":"Mgn93ll/a 8GB/256GB Silver","price":450.0},{"device":"MGND3LL/A 8GB/256GB Gold","display":"Mgnd3ll/a 8GB/256GB Gold","price":450.0}],"IPAD":[{"device":"iPad A16 128GB Wi-Fi / VZW","display":"iPad A16 128GB Wi-fi / Vzw","price":240.0},{"device":"iPad A16 256GB Wi-Fi / VZW","display":"iPad A16 256GB Wi-fi / Vzw","price":320.0},{"device":"iPad A16 512GB Wi-Fi / VZW","display":"iPad A16 512GB Wi-fi / Vzw","price":430.0},{"device":"iPad A16 128GB Cellular","display":"iPad A16 128GB Cellular","price":330.0},{"device":"iPad A16 256GB Cellular","display":"iPad A16 256GB Cellular","price":450.0},{"device":"iPad A16 512GB Cellular","display":"iPad A16 512GB Cellular","price":580.0},{"device":"iPad Air 11\" (M3) 128GB Wi-Fi / VZW","display":"iPad Air 11 M3 128GB Wi-fi / Vzw","price":400.0},{"device":"iPad Air 11\" (M3) 256GB Wi-Fi / VZW","display":"iPad Air 11 M3 256GB Wi-fi / Vzw","price":510.0},{"device":"iPad Air 11\" (M3) 512GB Wi-Fi / VZW","display":"iPad Air 11 M3 512GB Wi-fi / Vzw","price":610.0},{"device":"iPad Air 11\" (M3) 1TB Wi-Fi / VZW","display":"iPad Air 11 M3 1TB Wi-fi / Vzw","price":700.0},{"device":"iPad Air 11\" (M3) 128GB Cellular","display":"iPad Air 11 M3 128GB Cellular","price":560.0},{"device":"iPad Air 11\" (M3) 256GB Cellular","display":"iPad Air 11 M3 256GB Cellular","price":660.0},{"device":"iPad Air 11\" (M3) 512GB Cellular","display":"iPad Air 11 M3 512GB Cellular","price":760.0},{"device":"iPad Air 11\" (M3) 1TB Cellular","display":"iPad Air 11 M3 1TB Cellular","price":800.0},{"device":"iPad Air 2024 13\" (M3) 128GB Wi-Fi / VZW","display":"iPad Air 2024 13 M3 128GB Wi-fi / Vzw","price":580.0},{"device":"iPad Air 2024 13\" (M3) 256GB Wi-Fi / VZW","display":"iPad Air 2024 13 M3 256GB Wi-fi / Vzw","price":680.0},{"device":"iPad Air 2024 13\" (M3) 512GB  Wi-Fi / VZW","display":"iPad Air 2024 13 M3 512GB Wi-fi / Vzw","price":730.0},{"device":"iPad Air 2024 13\" (M3) 1TB Wi-Fi / VZW","display":"iPad Air 2024 13 M3 1TB Wi-fi / Vzw","price":780.0},{"device":"iPad Air 2024 13\" (M3) 128GB Cellular","display":"iPad Air 2024 13 M3 128GB Cellular","price":630.0},{"device":"iPad Air 2024 13\" (M3) 256GB Cellular","display":"iPad Air 2024 13 M3 256GB Cellular","price":730.0},{"device":"iPad Air 2024 13\" (M3) 512GB Cellular","display":"iPad Air 2024 13 M3 512GB Cellular","price":780.0},{"device":"iPad Air 2024 13\" (M3) 1TB Cellular","display":"iPad Air 2024 13 M3 1TB Cellular","price":800.0},{"device":"iPad Pro 13\" (M4) 256GB Wi-Fi / VZW","display":"iPad Pro 13 M4 256GB Wi-fi / Vzw","price":930.0},{"device":"iPad Pro 13\" (M4) 512GB Wi-Fi / VZW","display":"iPad Pro 13 M4 512GB Wi-fi / Vzw","price":1120.0},{"device":"iPad Pro 13\" (M4) 1TB Wi-Fi / VZW","display":"iPad Pro 13 M4 1TB Wi-fi / Vzw","price":1340.0},{"device":"iPad Pro 13\" (M4) 2TB Wi-Fi / VZW","display":"iPad Pro 13 M4 2TB Wi-fi / Vzw","price":1440.0},{"device":"iPad Pro 13\" (M4) 256GB Cellular","display":"iPad Pro 13 M4 256GB Cellular","price":960.0},{"device":"iPad Pro 13\" (M4) 512GB Cellular","display":"iPad Pro 13 M4 512GB Cellular","price":1200.0},{"device":"iPad Pro 13\" (M4) 1TB Cellular","display":"iPad Pro 13 M4 1TB Cellular","price":1330.0},{"device":"iPad Pro 13\" (M4) 2TB Cellular","display":"iPad Pro 13 M4 2TB Cellular","price":1430.0},{"device":"iPad Pro 11\" (M4) 256GB Wi-Fi / VZW","display":"iPad Pro 11 M4 256GB Wi-fi / Vzw","price":750.0},{"device":"iPad Pro 11\" (M4) 512GB Wi-Fi / VZW","display":"iPad Pro 11 M4 512GB Wi-fi / Vzw","price":900.0},{"device":"iPad Pro 11\" (M4) 1TB Wi-Fi / VZW","display":"iPad Pro 11 M4 1TB Wi-fi / Vzw","price":1000.0},{"device":"iPad Pro 11\" (M4) 2TB Wi-Fi / VZW","display":"iPad Pro 11 M4 2TB Wi-fi / Vzw","price":1100.0},{"device":"iPad Pro 11\" (M4) 256GB Cellular","display":"iPad Pro 11 M4 256GB Cellular","price":950.0},{"device":"iPad Pro 11\" (M4) 512GB Cellular","display":"iPad Pro 11 M4 512GB Cellular","price":1060.0},{"device":"iPad Pro 11\" (M4) 1TB Cellular","display":"iPad Pro 11 M4 1TB Cellular","price":1160.0},{"device":"iPad Pro 11\" (M4) 2TB Cellular","display":"iPad Pro 11 M4 2TB Cellular","price":1260.0},{"device":"IPAD MINI 7 128GB Wi-Fi / VZW","display":"iPad Mini 7 128GB Wi-fi / Vzw","price":310.0},{"device":"IPAD MINI 7 256GB Wi-Fi / VZW","display":"iPad Mini 7 256GB Wi-fi / Vzw","price":380.0},{"device":"IPAD MINI 7 128GB Cellular","display":"iPad Mini 7 128GB Cellular","price":450.0},{"device":"IPAD MINI 7 256GB Cellular","display":"iPad Mini 7 256GB Cellular","price":550.0},{"device":"iPad 10 64GB Wi-Fi / VZW","display":"iPad 10 64GB Wi-fi / Vzw","price":200.0},{"device":"iPad 10 256GB Wi-Fi / VZW","display":"iPad 10 256GB Wi-fi / Vzw","price":350.0},{"device":"iPad 10 64GB Cellular","display":"iPad 10 64GB Cellular","price":250.0},{"device":"iPad 10 256GB Cellular","display":"iPad 10 256GB Cellular","price":460.0}],"WATCHS & AIRPODS":[{"device":"SE2 40MM","display":"Se2 40MM","price":160.0},{"device":"SE2 44MM","display":"Se2 44MM","price":190.0},{"device":"S10 42MM","display":"S10 42MM","price":285.0},{"device":"S10 46MM","display":"S10 46MM","price":315.0},{"device":"Ultra 2 49MM Natural","display":"Ultra 2 49MM Natural","price":620.0},{"device":"Ultra 2 49MM Black","display":"Ultra 2 49MM Black","price":630.0},{"device":"AirPod 4TH(MXP63)","display":"Airpod 4TH Mxp63","price":90.0},{"device":"AirPod 4TH(MXP93)","display":"Airpod 4TH Mxp93","price":135.0},{"device":"AirPod Pro 2 (MTJV3) 2023","display":"Airpod Pro 2 Mtjv3 2023","price":155.0},{"device":"AirPod Max USBC","display":"Airpod Max Usbc","price":405.0},{"device":"Pencil Pro MX2D3","display":"Pencil Pro Mx2d3","price":90.0}],"GAMING":[{"device":"Ps5 Digital","display":"Ps5 Digital","price":300.0},{"device":"Ps5 Disk","display":"Ps5 Disk","price":360.0},{"device":"Ps5 Pro","display":"Ps5 Pro","price":550.0},{"device":"Ps Portal","display":"Ps Portal","price":120.0},{"device":"Xbox Series S 512GB","display":"Xbox Series S 512GB","price":200.0},{"device":"Xbox Series S 1TB","display":"Xbox Series S 1TB","price":250.0},{"device":"Xbox Series X 1TB White","display":"Xbox Series X 1TB White","price":380.0},{"device":"Xbox Series X 1TB Black","display":"Xbox Series X 1TB Black","price":480.0},{"device":"Xbox Series X 2TB Galaxy","display":"Xbox Series X 2TB Galaxy","price":500.0},{"device":"PS VR","display":"Ps Vr","price":240.0},{"device":"Nintendo Switch","display":"Nintendo Switch","price":180.0},{"device":"Nintendo Switch OLED","display":"Nintendo Switch Oled","price":220.0},{"device":"Nintendo Switch Lite","display":"Nintendo Switch Lite","price":100.0},{"device":"Nintendo Switch 2","display":"Nintendo Switch 2","price":380.0},{"device":"Nintendo Switch 2 Bundle","display":"Nintendo Switch 2 Bundle","price":420.0},{"device":"Meta Quest 3S 128GB","display":"Meta Quest 3S 128GB","price":180.0},{"device":"Meta Quest 3S 256GB","display":"Meta Quest 3S 256GB","price":240.0},{"device":"Meta Quest 3 4K 512GB","display":"Meta Quest 3 4K 512GB","price":380.0},{"device":"Xbox Quest","display":"Xbox Quest","price":310.0}],"TOOLS":[{"device":"DCK240C2","display":"Dck240c2","price":90.0}]};
+const DEFAULT_RULES = {"1-100":30,"101-220":20,"221-300":15,"301-469":13,"470+":10}; // numeric % (back-compat)
+const DEFAULT_BUCKETS = [["1-100", 1, 100], ["101-220", 101, 220], ["221-300", 221, 300], ["301-469", 301, 469], ["470+", 470, Infinity]]; // [[label, lo, hi], ...]
+const PIN_SHA256 = "5db1fee4b5703808c48078a76768b155b421b210c0761cd6a5d223f4d99f1eaa";
+
+// ==== THEMES ====
+const THEMES = [
+  "midnight-glass","clean-pro","ivory-gold-luxe","carbon-neon","deep-purple",
+  "forest-emerald","rose-quartz","sunset-gold","ocean-breeze","matte-black",
+  "slate-gray","mocha","arctic-ice","neon-pop","royal-indigo",
+  "copper-sand","aurora","jade-mist","obsidian","paper-white"
+];
+function applyTheme(name){ if(!THEMES.includes(name)) name="midnight-glass"; document.body.setAttribute("data-theme", name); localStorage.setItem("uiThemeV1", name); }
+function loadTheme(){ const t=localStorage.getItem("uiThemeV1")||"midnight-glass"; applyTheme(t); }
+
+// ==== CONFIG ====
+function getEngineConfig(){
+  const raw = localStorage.getItem('engineConfigV1');
+  if(!raw) return {defaults: DEFAULT_RULES, perSheet: {}, buckets: DEFAULT_BUCKETS};
+  try{
+    const cfg = JSON.parse(raw);
+    cfg.defaults = cfg.defaults ?? DEFAULT_RULES;
+    cfg.perSheet = cfg.perSheet ?? {};
+    cfg.buckets = cfg.buckets ?? DEFAULT_BUCKETS;
+    return cfg;
+  }catch(e){
+    return {defaults: DEFAULT_RULES, perSheet: {}, buckets: DEFAULT_BUCKETS};
+  }
+}
+function setEngineConfig(cfg){ localStorage.setItem('engineConfigV1', JSON.stringify(cfg)); }
+function downloadConfigFile(cfg){ const blob=new Blob([JSON.stringify(cfg,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='config.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }
+
+// Normalize rules: number => {pct:number, flat:0}; object => {pct,flat}
+function asRuleObj(v){
+  if(v==null) return {pct:null, flat:null};
+  if(typeof v === 'number') return {pct:v, flat:null};
+  if(typeof v === 'object'){
+    const pct = (v.pct===''||v.pct==null) ? null : Number(v.pct);
+    const flat = (v.flat===''||v.flat==null) ? null : Number(v.flat);
+    return {pct, flat};
+  }
+  return {pct:null, flat:null};
+}
+
+// ==== SEARCH / FUZZY ====
+function normText(s){ if(!s) return ''; s=String(s).toLowerCase(); s=s.replace(/["”]/g,' inch '); s=s.replace(/\b(\d+)\s*-\s*inch\b/g,'$1 inch'); s=s.replace(/\b(\d+)\s*inch(es)?\b/g,'$1 inch'); s=s.replace(/-/g,' '); s=s.replace(/\b([2-6])\s*g\b/g,'$1g'); s=s.replace(/[^a-z0-9\. ]+/g,' '); s=s.replace(/\s+/g,' ').trim(); return s; }
+function buildSearchBlob(name, sheetName){ const base=normText(name); const stripped=base.replace(/\b(ipad|iphone|apple|samsung)\b/g,'').replace(/\s+/g,' ').trim(); let sheetPart=''; if(sheetName){ sheetPart=' '+normText(String(sheetName)); } return (base+' '+stripped+sheetPart).trim(); }
+function levenshtein(a,b){ a=a||''; b=b||''; const m=a.length,n=b.length; if(a===b)return 0; if(!m)return n; if(!n)return m; const dp=new Array(n+1); for(let j=0;j<=n;j++) dp[j]=j; for(let i=1;i<=m;i++){ let prev=dp[0]; dp[0]=i; for(let j=1;j<=n;j++){ const tmp=dp[j]; const cost=a[i-1]===b[j-1]?0:1; dp[j]=Math.min(dp[j]+1,dp[j-1]+1,prev+cost); prev=tmp; } } return dp[n]; }
+function fuzzyTokenMatch(token, hayTokens){ if(!token) return true; const t=token; for(const h of hayTokens){ if(h.includes(t)) return true; } const maxEd=t.length>=6?2:1; for(const h of hayTokens){ if(Math.abs(h.length-t.length)>3) continue; if(levenshtein(t,h)<=maxEd) return true; } return false; }
+function matchesQuery(row, q){ if(!q) return true; const hay=row.search; const nq=normText(q); const tokens=nq.split(' ').filter(Boolean); if(!tokens.length)return true; const hayTokens=hay.split(' ').filter(Boolean); for(const tok of tokens){ if(!fuzzyTokenMatch(tok, hayTokens)) return false; } return true; }
+function extractNums(tokens){ const out=[]; for(const t of tokens){ const m=t.match(/^\d+(?:\.\d+)?$/); if(m){ out.push(parseFloat(m[0])); } } return out; }
+function rankScore(row, q){
+  const hay=row.search||''; const nq=normText(q||''); if(!nq) return 0;
+  const tokens=nq.split(' ').filter(Boolean); const hayTokens=hay.split(' ').filter(Boolean);
+  let score=0;
+  if(hay.includes(nq)) score+=40;
+  for(let i=0;i<tokens.length-1;i++){ const phrase=tokens[i]+' '+tokens[i+1]; if(hay.includes(phrase)) score+=12; }
+  for(const tok of tokens){
+    let best=0;
+    for(const h of hayTokens){
+      if(h===tok){ best=Math.max(best,10); continue; }
+      if(h.startsWith(tok)||h.includes(tok)){ best=Math.max(best,6); continue; }
+      const maxEd=tok.length>=6?2:1;
+      if(Math.abs(h.length-tok.length)<=3&&levenshtein(tok,h)<=maxEd){ best=Math.max(best,3); }
+    }
+    score+=best;
+  }
+  const qNums=extractNums(tokens); const hNums=extractNums(hayTokens);
+  if(qNums.length&&hNums.length){
+    let bestDelta=Infinity;
+    for(const qn of qNums){ for(const hn of hNums){ const d=Math.abs(hn-qn); if(d<bestDelta) bestDelta=d; } }
+    if(bestDelta===0) score+=25; else if(bestDelta<=1) score+=10; else if(bestDelta<=2) score+=5; else score-=bestDelta;
+  }
+  score-=Math.max(0,hayTokens.length-tokens.length)*0.25;
+  return score;
+}
+
+// ==== Rounding rule ====
+function roundPrice(n){
+  const x = Number(n);
+  if (!isFinite(x)) return '';
+  // Always round to nearest $10 first
+  let p = Math.round(x/10)*10;
+  // If above $340, avoid 10/90 endings
+  if (p > 340) {
+    const last = ((p % 100) + 100) % 100; // positive modulo
+    if (last === 10) p -= 10;
+    else if (last === 90) p += 10;
+  }
+  return p;
+}
+
+// ==== Buckets + rules ====
+function activeBuckets(){
+  const cfg=getEngineConfig();
+  const b = Array.isArray(cfg.buckets) ? cfg.buckets : DEFAULT_BUCKETS;
+  return b.map(arr => ({ label: String(arr[0]), lo: Number(arr[1]), hi: (arr[2]===Infinity ? Infinity : Number(arr[2])) }));
+}
+
+function resolveRule(label, sheetName){
+  const cfg=getEngineConfig();
+  const page = (cfg.perSheet && cfg.perSheet[sheetName]) ? cfg.perSheet[sheetName] : {};
+  const vPage = page ? page[label] : null;
+  const vDef = cfg.defaults ? cfg.defaults[label] : null;
+  const rulePage = asRuleObj(vPage);
+  const ruleDef  = asRuleObj(vDef);
+  // fallback to DEFAULT_RULES numeric if both empty
+  if(rulePage.pct==null && rulePage.flat==null && ruleDef.pct==null && ruleDef.flat==null){
+    const num = (DEFAULT_RULES[label]!==undefined) ? Number(DEFAULT_RULES[label]) : 0;
+    return {pct:num, flat:null};
+  }
+  // prefer page overrides if provided, else defaults
+  return {
+    pct: (rulePage.pct!=null ? rulePage.pct : ruleDef.pct),
+    flat: (rulePage.flat!=null ? rulePage.flat : ruleDef.flat)
+  };
+}
+
+function finalPriceFor(sheetName, base){
+  const bucks = activeBuckets();
+  for(const b of bucks){
+    if(base>=b.lo && base<=b.hi){
+      const rule = resolveRule(b.label, sheetName);
+      const pct = Number(rule.pct||0);
+      const flat = Number(rule.flat||0);
+      let p = base * (1 - pct/100);
+      p = p - flat;
+      if(p < 0) p = 0;
+      return roundPrice(p);
+    }
+  }
+  return roundPrice(base);
+}
+
+// ==== PREP ====
+let PREPARED=null; let activeSheet=Object.keys(DATASETS)[0]||null;
+const sheetSelect=document.getElementById('sheetSelect'); const sectionsEl=document.getElementById('sections'); const searchEl=document.getElementById('search');
+function prepareIndex(){ if(PREPARED) return; PREPARED={}; Object.entries(DATASETS).forEach(([sheet, rows])=>{ PREPARED[sheet]=rows.map(r=>({ device:r.device, price:r.price, search:buildSearchBlob((r.display||r.device), sheet) })); }); }
+
+function render(){
+  prepareIndex();
+  // pages dropdown
+  sheetSelect.innerHTML='';
+  Object.keys(DATASETS).forEach(name=>{ const opt=document.createElement('option'); opt.value=name; opt.textContent=name; if(!activeSheet) activeSheet=name; if(name===activeSheet) opt.selected=true; sheetSelect.appendChild(opt); });
+  // sections
+  sectionsEl.innerHTML='';
+  Object.entries(PREPARED).forEach(([name,rows])=>{
+    const sec=document.createElement('section'); sec.className='section'+(name===activeSheet?' active':'');
+    const list=document.createElement('div'); list.className='list';
+    const q=searchEl.value||'';
+    const matches=[];
+    rows.forEach((r, idx)=>{
+      const dev=String(r.device||r.display);
+      const base=Number(r.price);
+      if(!dev||isNaN(base)) return;
+      if(!matchesQuery(r,q)) return;
+      const sc=q?rankScore(r,q):0;
+      const fp=finalPriceFor(name, base);
+      matches.push({idx, dev, price:fp, sc});
+    });
+    matches.sort((a,b)=> (b.sc - a.sc) || (a.idx - b.idx));
+    matches.forEach(m=>{
+      const item=document.createElement('div'); item.className='item';
+      const nameEl=document.createElement('div'); nameEl.className='name'; nameEl.textContent=m.dev;
+      const priceEl=document.createElement('div'); priceEl.className='price'; priceEl.textContent=String(m.price);
+      const right=document.createElement('div'); right.style.textAlign='right'; right.appendChild(priceEl);
+      item.appendChild(nameEl); item.appendChild(right); list.appendChild(item);
+    });
+    sec.appendChild(list); sectionsEl.appendChild(sec);
+  });
+}
+
+searchEl.addEventListener('input', render);
+sheetSelect.addEventListener('change', (e)=>{ activeSheet=e.target.value; render(); });
+
+// ==== Engine Room ====
+const overlay=document.getElementById('engineOverlay'); const closeBtn=document.getElementById('closeEngine'); const pinClose=document.getElementById('pinClose'); const pinInput=document.getElementById('pinInput'); const pinCheck=document.getElementById('pinCheck'); const engineBody=document.getElementById('engineBody');
+const defaultsRow=document.getElementById('defaultsRow'); const sheetsBlock=document.getElementById('sheetsBlock'); const saveBtn=document.getElementById('saveEngine'); const resetBtn=document.getElementById('resetEngine'); const exportBtn=document.getElementById('exportConfig'); const titleBtn=document.getElementById('titleBtn'); const themeSelect=document.getElementById('themeSelect'); const bucketsRow=document.getElementById('bucketsRow');
+
+function openEngine(){ overlay.style.display='flex'; pinInput.value=''; engineBody.style.display='none'; }
+function closeEngine(){ overlay.style.display='none'; }
+document.addEventListener('keydown', (e)=>{ if(e.ctrlKey && (e.key==='e'||e.key==='E')){ e.preventDefault(); openEngine(); }});
+titleBtn.addEventListener('click', openEngine);
+titleBtn.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openEngine(); }});
+closeBtn.addEventListener('click', closeEngine); pinClose.addEventListener('click', closeEngine);
+
+async function hashSHA256(str){ const enc=new TextEncoder().encode(str); const buf=await crypto.subtle.digest('SHA-256',enc); return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join(''); }
+pinCheck.addEventListener('click', async ()=>{ const h=await hashSHA256(pinInput.value||''); if(h===PIN_SHA256){ buildEngineUI(); engineBody.style.display='block'; } else { alert('Wrong PIN'); }});
+
+// === Engine UI builders ===
+const THEMES_LIST = THEMES;
+function buildThemeUI(){
+  themeSelect.innerHTML='';
+  THEMES_LIST.forEach(t=>{ const opt=document.createElement('option'); opt.value=t; opt.textContent=t.replace(/-/g,' '); themeSelect.appendChild(opt); });
+  const cur=document.body.getAttribute('data-theme')||'midnight-glass'; themeSelect.value=cur;
+  themeSelect.addEventListener('change', (e)=>{ applyTheme(e.target.value); });
+}
+
+function buildBucketsUI(){
+  const bucks = activeBuckets();
+  bucketsRow.innerHTML='';
+  bucks.forEach((b,i)=>{
+    const wrap=document.createElement('div'); wrap.style.display='grid'; wrap.style.gridTemplateColumns='1fr 1fr 1fr'; wrap.style.gap='6px';
+    const lab=document.createElement('input'); lab.type='text'; lab.value=b.label; lab.placeholder='Label'; lab.dataset.idx=i; lab.dataset.field='label';
+    const lo=document.createElement('input'); lo.type='number'; lo.value=b.lo; lo.placeholder='Low'; lo.dataset.idx=i; lo.dataset.field='lo';
+    const hi=document.createElement('input'); hi.type='number'; hi.value=(b.hi===Infinity? 999999 : b.hi); hi.placeholder='High'; hi.dataset.idx=i; hi.dataset.field='hi';
+    wrap.appendChild(lab); wrap.appendChild(lo); wrap.appendChild(hi);
+    bucketsRow.appendChild(wrap);
+  });
+  // add row button
+  const add = document.createElement('button'); add.textContent = 'Add Bucket'; add.style.marginTop='8px';
+  add.addEventListener('click', ()=>{
+    const wrap=document.createElement('div'); wrap.style.display='grid'; wrap.style.gridTemplateColumns='1fr 1fr 1fr'; wrap.style.gap='6px';
+    const lab=document.createElement('input'); lab.type='text'; lab.placeholder='Label';
+    const lo=document.createElement('input'); lo.type='number'; lo.placeholder='Low';
+    const hi=document.createElement('input'); hi.type='number'; hi.placeholder='High';
+    wrap.appendChild(lab); wrap.appendChild(lo); wrap.appendChild(hi);
+    bucketsRow.appendChild(wrap);
+  });
+  bucketsRow.parentElement.appendChild(add);
+}
+
+function makeRuleRow(label, scope, sheetName){
+  const wrap=document.createElement('div'); wrap.className='row';
+  const lab=document.createElement('label'); lab.textContent=label+' (% / $)';
+  const pct=document.createElement('input'); pct.type='number'; pct.min='0'; pct.step='1'; pct.placeholder='%'; pct.dataset.type='pct';
+  const flat=document.createElement('input'); flat.type='number'; flat.min='0'; flat.step='1'; flat.placeholder='$'; flat.dataset.type='flat';
+  pct.dataset.key=label; flat.dataset.key=label; pct.dataset.scope=scope; flat.dataset.scope=scope;
+  if(sheetName){ pct.dataset.sheet=sheetName; flat.dataset.sheet=sheetName; }
+  const cfg=getEngineConfig(); const src = (scope==='defaults' ? cfg.defaults?.[label] : (cfg.perSheet?.[sheetName]?.[label]));
+  const rule=asRuleObj(src);
+  pct.value = (rule.pct==null || rule.pct===0) ? '' : rule.pct;
+  flat.value = (rule.flat==null || rule.flat===0) ? '' : rule.flat;
+  wrap.appendChild(lab); wrap.appendChild(pct); wrap.appendChild(flat);
+  return wrap;
+}
+
+function buildRulesUI(){
+  // defaults
+  const bucks = activeBuckets();
+  defaultsRow.innerHTML='';
+  bucks.forEach(b => { defaultsRow.appendChild(makeRuleRow(b.label, 'defaults', null)); });
+
+  // per-sheet
+  sheetsBlock.innerHTML='';
+  Object.keys(DATASETS).forEach(sheetName=>{
+    const block=document.createElement('div'); block.className='sheet-block';
+    const title=document.createElement('div'); title.style.marginBottom='6px'; title.innerHTML='<b>'+sheetName+'</b>';
+    block.appendChild(title);
+    const holder=document.createElement('div'); holder.id='rules-'+sheetName;
+    bucks.forEach(b => { holder.appendChild(makeRuleRow(b.label, 'sheet', sheetName)); });
+    block.appendChild(holder);
+    sheetsBlock.appendChild(block);
+  });
+}
+
+function buildEngineUI(){
+  buildThemeUI();
+  buildBucketsUI();
+  buildRulesUI();
+}
+
+// Save
+saveBtn.addEventListener('click', ()=>{
+  const cfg=getEngineConfig();
+
+  // buckets
+  const allRows = bucketsRow.querySelectorAll('div');
+  const rows=[];
+  allRows.forEach(r=>{
+    const inputs=r.querySelectorAll('input');
+    if(inputs.length!==3) return;
+    const label=(inputs[0].value||'').trim() || 'Bucket';
+    const loVal=inputs[1].value; const hiVal=inputs[2].value;
+    const low=Number(loVal||0);
+    let high = (hiVal === '' ? Infinity : Number(hiVal));
+    if(!isFinite(high)) high = Infinity;
+    rows.push([label, low, high]);
+  });
+  if(rows.length){ cfg.buckets = rows; }
+
+  // defaults rules
+  const defRules = {};
+  defaultsRow.querySelectorAll('.row').forEach(r=>{
+    const lab=r.querySelector('label'); if(!lab) return;
+    const label=lab.textContent.replace(' (% / $)','');
+    const pct=r.querySelector('input[data-type="pct"]');
+    const flat=r.querySelector('input[data-type="flat"]');
+    const rule={ pct: (pct.value===''?null:Number(pct.value)), flat: (flat.value===''?null:Number(flat.value)) };
+    defRules[label]=rule;
+  });
+  cfg.defaults = defRules;
+
+  // per-sheet rules
+  cfg.perSheet = {};
+  Object.keys(DATASETS).forEach(sheetName=>{
+    const holder=document.getElementById('rules-'+sheetName);
+    const o={};
+    holder.querySelectorAll('.row').forEach(r=>{
+      const lab=r.querySelector('label'); if(!lab) return;
+      const label=lab.textContent.replace(' (% / $)','');
+      const pct=r.querySelector('input[data-type="pct"]');
+      const flat=r.querySelector('input[data-type="flat"]');
+      const rule={ pct: (pct.value===''?null:Number(pct.value)), flat: (flat.value===''?null:Number(flat.value)) };
+      o[label]=rule;
+    });
+    cfg.perSheet[sheetName]=o;
+  });
+
+  setEngineConfig(cfg);
+  render();
+  alert('Saved. Buckets and rules updated.');
+});
+
+resetBtn.addEventListener('click', ()=>{
+  if(!confirm('Reset ALL overrides and defaults to initial values?')) return;
+  setEngineConfig({ defaults: DEFAULT_RULES, perSheet: {}, buckets: DEFAULT_BUCKETS });
+  buildEngineUI(); render();
+});
+exportBtn.addEventListener('click', ()=>{ const cfg=getEngineConfig(); downloadConfigFile(cfg); });
+
+// Boot
+// Boot (patched to wait for config)
+(async () => {
+  try { loadTheme && loadTheme(); } catch(e){}
+  try { await initEngineConfigFromServer(); } catch(e){}
+  try { render && render(); } catch(e){}
+})();
+</script>
+
+    <div class="engine-overlay" id="engineOverlay" aria-hidden="true">
+      <div class="engine-modal" role="dialog" aria-modal="true" aria-labelledby="engineTitle">
+        <h3 id="engineTitle">Engine Room</h3>
+        <p style="color:#98ffa9;margin:0 0 10px;">Enter password to edit rules.</p>
+        <input id="enginePwd" type="password" placeholder="Password" autocomplete="current-password" />
+        <div class="row">
+          <button class="btn" id="engineCancel">Cancel</button>
+          <button class="btn" id="engineEnter">Enter</button>
+        </div>
+      </div>
+    </div>
+    
+
+    <script>
+      // ----- SEARCH NORMALIZATION -----
+      const HYPHENS = /[\u2010\u2011\u2012\u2013\u2014\u2212-]/g;
+      const QUOTES  = /["“”″]/g;
+      const SPACES  = /\s+/g;
+
+      function expandQueryVariants(q) {
+        q = (q || '').toLowerCase().trim();
+        const variants = new Set([q]);
+
+        if (q.includes('inch')) {
+          variants.add(q.replace(/inch/g, '"'));
+          variants.add(q.replace(/inch/g, '″'));
+          variants.add(q.replace(/inch/g, 'in'));
+        }
+        if (/[“”"″]/.test(q)) {
+          variants.add(q.replace(QUOTES, 'inch'));
+          variants.add(q.replace(QUOTES, 'in'));
+        }
+
+        const hyphenNormalized = q.replace(HYPHENS, '-');
+        if (hyphenNormalized !== q) variants.add(hyphenNormalized);
+        variants.add(hyphenNormalized.replace(/-/g, ' '));
+
+        if (/\bwi\s*fi\b/.test(q) || /\bwifi\b/.test(q) || /\bwi-?fi\b/.test(q)) {
+          ['wifi','wi-fi','wi fi','wi-fi/vzw','wi-fi / vzw','wi-fi vzw','wi-fi/vzw','wi‑fi','wi‑fi/vzw','wi‑fi vzw'].forEach(v => variants.add(v));
+        }
+
+        const common = [
+          ['att', 'at&t', 'atnt'],
+          ['tmobile','t-mobile','t mobile'],
+          ['verizon','vz','vzw']
+        ];
+        common.forEach(group => {
+          if (group.some(g => q.includes(g))) group.forEach(g => variants.add(g));
+        });
+
+        variants.add(q.replace(/[^\w\s]/g, ' '));
+        [...variants].forEach(v => variants.add(v.replace(SPACES, ' ').trim()));
+
+        return [...variants];
+      }
+
+      function normalizeTextForIndex(s) {
+        if (!s) return '';
+        let t = String(s).toLowerCase();
+        t = t.replace(HYPHENS, '-').replace(QUOTES, '"');
+        const withInch = t.replace(/"/g, ' inch ');
+        const withSpaces = withInch.replace(/-/g, ' ');
+        const enriched = [
+          t,
+          withInch,
+          withSpaces,
+          withSpaces.replace(/\bvzw\b/g, 'verizon'),
+          withSpaces.replace(/\bvz\b/g, 'verizon')
+        ].join('  ');
+        return enriched.replace(SPACES, ' ').trim();
+      }
+
+      let __SEARCH_INDEX__ = [];
+      function buildSearchIndexFromDOM() {
+        __SEARCH_INDEX__ = [];
+        document.querySelectorAll('.device-row').forEach(row => {
+          const text = row.innerText || row.textContent || '';
+          __SEARCH_INDEX__.push({
+            textNorm: normalizeTextForIndex(text),
+            el: row
+          });
+        });
+      }
+      document.addEventListener('DOMContentLoaded', buildSearchIndexFromDOM);
+
+      function performSearch(rawQuery) {
+        const queries = expandQueryVariants(rawQuery).map(q => normalizeTextForIndex(q));
+        __SEARCH_INDEX__.forEach(({textNorm, el}) => {
+          const hit = queries.some(q => q && textNorm.includes(q));
+          el.style.display = hit ? '' : 'none';
+        });
+      }
+
+      // Hook: if a #searchInput exists, wire it
+      const __si = document.getElementById('searchInput');
+      if (__si) {
+        __si.addEventListener('input', (e) => performSearch(e.target.value));
+      }
+
+      // ----- ENGINE MODAL CONTROL -----
+      function openEngineModal() {
+        const ov = document.getElementById('engineOverlay');
+        if (!ov) return;
+        ov.style.display = 'block';
+        requestAnimationFrame(() => {
+          const input = document.getElementById('enginePwd');
+          if (input) { input.value = ''; input.focus({ preventScroll: false }); }
+        });
+      }
+      function closeEngineModal() {
+        const ov = document.getElementById('engineOverlay');
+        if (ov) ov.style.display = 'none';
+      }
+      const __cancel = document.getElementById('engineCancel');
+      if (__cancel) __cancel.addEventListener('click', closeEngineModal);
+      const __ov = document.getElementById('engineOverlay');
+      if (__ov) __ov.addEventListener('click', (e) => { if (e.target.id === 'engineOverlay') closeEngineModal(); });
+      const __enter = document.getElementById('engineEnter');
+      if (__enter) __enter.addEventListener('click', () => {
+        const pwd = (document.getElementById('enginePwd') || {}).value || '';
+        if (typeof window.handleEnginePassword === 'function') {
+          window.handleEnginePassword(pwd);
+        } else {
+          // Fallback: just close if no handler is wired
+          closeEngineModal();
+        }
+      });
+      document.addEventListener('keydown', (e) => {
+        const ov = document.getElementById('engineOverlay');
+        if (e.key === 'Escape' && ov && ov.style.display === 'block') closeEngineModal();
+      });
+
+      // Expose opener for existing "Engine Room" button to call
+      window.openEngineModal = openEngineModal;
+    </script>
+    
+
+<script>
+  // Auto-injected config loader — do not remove
+  const CONFIG_URL = '/config.json';
+  const BUILD_ID = (window.__BUILD_ID__ || Date.now());
+
+  function mergeConfig(current, remote) {
+    const out = {
+      defaults: (current && current.defaults) || {},
+      perSheet: (current && current.perSheet) || {},
+      buckets: (current && current.buckets) || []
+    };
+    if (remote && typeof remote === 'object') {
+      if (remote.defaults && typeof remote.defaults === 'object') out.defaults = remote.defaults;
+      if (remote.perSheet && typeof remote.perSheet === 'object') out.perSheet = remote.perSheet;
+      if (Array.isArray(remote.buckets)) out.buckets = remote.buckets;
+      if (remote.uiTheme) { try { applyTheme(String(remote.uiTheme)); } catch(e){} }
+    }
+    return out;
+  }
+
+  async function initEngineConfigFromServer(){
+    try{
+      const res = await fetch(CONFIG_URL + '?v=' + encodeURIComponent(BUILD_ID), { cache: 'no-store' });
+      if (!res.ok) return; // keep localStorage fallback
+      const remote = await res.json();
+      const current = (typeof getEngineConfig === 'function') ? getEngineConfig() : null;
+      if (!current) return;
+      const merged = mergeConfig(current, remote);
+      if (typeof setEngineConfig === 'function') setEngineConfig(merged);
+    }catch(e){ console.warn('Config fetch failed', e); }
+  }
+</script>
+</body>
+</html>
