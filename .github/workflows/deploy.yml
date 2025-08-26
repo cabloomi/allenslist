@@ -55,8 +55,8 @@ jobs:
       - name: Publish to Cloudflare Pages (Production)
         uses: cloudflare/pages-action@v1
         with:
-          apiToken: ${{ secrets.1i6MFwiicbFakRcKlUq0KF3ho88FMTDMuNGF-WZE }}
-          accountId: ${{ secrets.c7b2bb3a435b4434235f331853e0bb5e }}
+          apiToken: 1i6MFwiicbFakRcKlUq0KF3ho88FMTDMuNGF-WZE
+          accountId: c7b2bb3a435b4434235f331853e0bb5e
           projectName: allenslists
           directory: _site
           branch: main
