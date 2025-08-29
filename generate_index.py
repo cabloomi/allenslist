@@ -1123,10 +1123,19 @@ def main():
     out = cwd / "index.html"
     build_html(data, PIN_SHA256, DEFAULT_RULES, out)
     csv_out = cwd / "_site" / "data" / "prices.csv"
+    csv_out2 = cwd / "data" / "prices.csv"
     try:
         write_prices_csv_site(data, DEFAULT_RULES, str(csv_out))
         print(f"Wrote CSV: {csv_out}")
+        # Also write a copy at repo-root data/prices.csv (for workflows that build _site later)
+        try:
+            write_prices_csv_site(data, DEFAULT_RULES, str(csv_out2))
+            print(f"Wrote CSV: {csv_out2}")
+        except Exception as e2:
+            print(f"[WARN] Failed to write root CSV: {e2}")
+        # Ensure headers both under _site and repo root
         _ensure_headers_for_prices(cwd / "_site" / "_headers")
+        _ensure_headers_for_prices(cwd / "_headers")
         print("Ensured CORS headers for /data/prices.csv")
     except Exception as e:
         print(f"[WARN] Failed to write CSV: {e}")
