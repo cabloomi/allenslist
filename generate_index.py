@@ -348,6 +348,89 @@ def load_workbook_tables(src: Path):
         raise ValueError("No valid device/price rows found. Check the 'source' file format.")
     return data
 
+
+
+# === CSV export of site prices (server-side) ===
+from pathlib import Path as _Path
+import csv as _csv
+from datetime import datetime as _dt, timezone as _tz
+
+def _active_buckets_py():
+    # Convert PRICE_BUCKETS to list of dicts with label, lo, hi
+    out = []
+    for label, lo, hi in PRICE_BUCKETS:
+        out.append({"label": str(label), "lo": float(lo), "hi": float("inf") if hi == float("inf") else float(hi)})
+    return out
+
+def _as_rule_obj_py(v):
+    # DEFAULT_RULES may be {"label":{"pct":..,"flat":..}} or {"label": 5} meaning 5%
+    if v is None:
+        return {"pct": 0.0, "flat": 0.0}
+    if isinstance(v, (int, float, str)):
+        try:
+            return {"pct": float(v), "flat": 0.0}
+        except Exception:
+            return {"pct": 0.0, "flat": 0.0}
+    pct = float(v.get("pct") or 0)
+    flat = float(v.get("flat") or 0)
+    return {"pct": pct, "flat": flat}
+
+def _round_price_py(x: float) -> int:
+    if x is None:
+        return 0
+    if not (x == x) or x in (float("inf"), float("-inf")):
+        return 0
+    p = round(x/10.0)*10
+    if p > 340:
+        last = int(((p % 100) + 100) % 100)
+        if last == 10:
+            p -= 10
+        elif last == 90:
+            p += 10
+    if p < 0:
+        p = 0
+    return int(p)
+
+def _resolve_rule_py(label: str, sheet_name: str, defaults: dict):
+    # Only defaults are available server-side (per-sheet UI overrides live in localStorage)
+    vDef = defaults.get(label) if isinstance(defaults, dict) else None
+    return _as_rule_obj_py(vDef)
+
+def _final_price_for_py(sheet_name: str, base: float, defaults: dict) -> int:
+    bucks = _active_buckets_py()
+    b = float(base or 0)
+    for bucket in bucks:
+        if b >= bucket["lo"] and b <= bucket["hi"]:
+            rule = _resolve_rule_py(bucket["label"], sheet_name, defaults)
+            pct = float(rule.get("pct", 0.0) or 0.0)
+            flat = float(rule.get("flat", 0.0) or 0.0)
+            p = b * (1 - pct/100.0)
+            p = p - flat
+            return _round_price_py(p)
+    return _round_price_py(b)
+
+def write_prices_csv_site(data: dict, defaults: dict, out_path: str):
+    """
+    Emit a CSV mirroring on-site purchase prices using DEFAULT_RULES/PRICE_BUCKETS.
+    Columns: sheet,device,base_price_cents,purchase_price_cents,updated_at
+    """
+    _Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+    now = _dt.now(_tz.utc).isoformat(timespec="seconds")
+    with open(out_path, "w", newline="", encoding="utf-8") as f:
+        w = _csv.writer(f)
+        w.writerow(["sheet","device","base_price_cents","purchase_price_cents","updated_at"])
+        for sheet_name, rows in (data or {}).items():
+            if not isinstance(rows, list): 
+                continue
+            for r in rows:
+                device = (r.get("display") or r.get("device") or "").strip()
+                base = float(r.get("price") or 0)
+                # assume sheet stores dollars, convert to cents for CSV
+                base_cents = int(round(base * 100))
+                # compute final purchase price in dollars then to cents
+                final_dollars = _final_price_for_py(sheet_name, base, defaults)
+                final_cents = int(round(float(final_dollars) * 100))
+                w.writerow([sheet_name, device, base_cents, final_cents, now])
 def build_html(data: dict, pin_sha256: str, defaults: dict, out_path: Path):
     dataset_js = json.dumps(data, separators=(",", ":"), ensure_ascii=False)
     defaults_js = json.dumps(defaults, separators=(",", ":"), ensure_ascii=False)
@@ -1039,7 +1122,51 @@ def main():
 
     out = cwd / "index.html"
     build_html(data, PIN_SHA256, DEFAULT_RULES, out)
+    csv_out = cwd / "_site" / "data" / "prices.csv"
+    try:
+        write_prices_csv_site(data, DEFAULT_RULES, str(csv_out))
+        print(f"Wrote CSV: {csv_out}")
+        _ensure_headers_for_prices(cwd / "_site" / "_headers")
+        print("Ensured CORS headers for /data/prices.csv")
+    except Exception as e:
+        print(f"[WARN] Failed to write CSV: {e}")
     print(f"Wrote: {out}")
+
+
+def _ensure_headers_for_prices(headers_path: Path):
+    """
+    Ensure _site/_headers includes CORS for /data/prices.csv so other projects can fetch it.
+    Appends/updates the stanza:
+      /data/prices.csv
+        Access-Control-Allow-Origin: *
+        Cache-Control: public, max-age=300
+    """
+    headers_path.parent.mkdir(parents=True, exist_ok=True)
+    content = ""
+    if headers_path.exists():
+        content = headers_path.read_text(encoding="utf-8")
+    lines = content.splitlines()
+    # remove any existing /data/prices.csv block (simple heuristic)
+    out_lines = []
+    skip = False
+    for ln in lines:
+        if not skip and ln.strip() == "/data/prices.csv":
+            skip = True
+            continue
+        if skip and (ln.startswith("/") or not ln.startswith(" ")):
+            # end of block
+            skip = False
+        if not skip:
+            out_lines.append(ln)
+    # append our block
+    block = [
+        "/data/prices.csv",
+        "  Access-Control-Allow-Origin: *",
+        "  Cache-Control: public, max-age=300",
+        ""
+    ]
+    out_lines.extend(block)
+    headers_path.write_text("\n".join(out_lines), encoding="utf-8")
 
 if __name__ == "__main__":
     main()
