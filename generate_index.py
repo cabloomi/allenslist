@@ -409,26 +409,82 @@ def _final_price_for_py(sheet_name: str, base: float, defaults: dict) -> int:
             return _round_price_py(p)
     return _round_price_py(b)
 
+
+# === Engine config (read config.json if present) ===
+def _load_engine_config_py(root: _Path, defaults_rules: dict):
+    cfg_path = root / "config.json"
+    cfg = {"defaults": defaults_rules or {}, "perSheet": {}, "buckets": PRICE_BUCKETS}
+    try:
+        if cfg_path.exists():
+            raw = cfg_path.read_text(encoding="utf-8")
+            j = json.loads(raw)
+            if isinstance(j, dict):
+                cfg["defaults"] = j.get("defaults") or cfg["defaults"]
+                ps = j.get("perSheet")
+                if isinstance(ps, dict):
+                    cfg["perSheet"] = ps
+                bks = j.get("buckets")
+                if isinstance(bks, list) and all(isinstance(x, (list, tuple)) and len(x)>=3 for x in bks):
+                    cfg["buckets"] = [(x[0], x[1], x[2]) for x in bks]
+    except Exception as e:
+        print(f"[WARN] Failed to load config.json: {e}")
+    return cfg
+
+def _active_buckets_py(_cfg=None):
+    src = _cfg["buckets"] if (_cfg and "buckets" in _cfg and _cfg["buckets"]) else PRICE_BUCKETS
+    out = []
+    for label, lo, hi in src:
+        out.append({"label": str(label), "lo": float(lo), "hi": float("inf") if hi == float("inf") else float(hi)})
+    return out
+
+def _resolve_rule_py(label: str, sheet_name: str, cfg: dict, defaults: dict):
+    vPage = None
+    try: vPage = cfg.get("perSheet", {}).get(sheet_name, {}).get(label)
+    except Exception: vPage = None
+    vDef = None
+    try: vDef = cfg.get("defaults", {}).get(label)
+    except Exception: vDef = None
+    if vDef is None and isinstance(defaults, dict):
+        vDef = defaults.get(label)
+    rulePage = _as_rule_obj_py(vPage)
+    ruleDef  = _as_rule_obj_py(vDef)
+    pct = rulePage.get("pct", 0.0) if rulePage.get("pct") not in (None, "") else ruleDef.get("pct", 0.0)
+    flat = rulePage.get("flat", 0.0) if rulePage.get("flat") not in (None, "") else ruleDef.get("flat", 0.0)
+    return {"pct": float(pct or 0.0), "flat": float(flat or 0.0)}
+
+def _final_price_for_py(sheet_name: str, base: float, cfg: dict, defaults: dict) -> int:
+    bucks = _active_buckets_py(cfg)
+    b = float(base or 0)
+    for bucket in bucks:
+        if b >= bucket["lo"] and b <= bucket["hi"]:
+            rule = _resolve_rule_py(bucket["label"], sheet_name, cfg, defaults)
+            pct = float(rule.get("pct", 0.0) or 0.0)
+            flat = float(rule.get("flat", 0.0) or 0.0)
+            p = b * (1 - pct/100.0)
+            p = p - flat
+            return _round_price_py(p)
+    return _round_price_py(b)
 def write_prices_csv_site(data: dict, defaults: dict, out_path: str):
     """
-    Emit a CSV mirroring on-site purchase prices using DEFAULT_RULES/PRICE_BUCKETS.
+    Emit a CSV mirroring on-site purchase prices using DEFAULT_RULES/PRICE_BUCKETS,
+    overridden by config.json (defaults, perSheet, buckets) when available.
     Columns: sheet,device,base_price_cents,purchase_price_cents,updated_at
     """
+    root = _Path('.').resolve()
+    cfg = _load_engine_config_py(root, defaults)
     _Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     now = _dt.now(_tz.utc).isoformat(timespec="seconds")
     with open(out_path, "w", newline="", encoding="utf-8") as f:
         w = _csv.writer(f)
         w.writerow(["sheet","device","base_price_cents","purchase_price_cents","updated_at"])
         for sheet_name, rows in (data or {}).items():
-            if not isinstance(rows, list): 
+            if not isinstance(rows, list):
                 continue
             for r in rows:
                 device = (r.get("display") or r.get("device") or "").strip()
                 base = float(r.get("price") or 0)
-                # assume sheet stores dollars, convert to cents for CSV
                 base_cents = int(round(base * 100))
-                # compute final purchase price in dollars then to cents
-                final_dollars = _final_price_for_py(sheet_name, base, defaults)
+                final_dollars = _final_price_for_py(sheet_name, base, cfg, defaults)
                 final_cents = int(round(float(final_dollars) * 100))
                 w.writerow([sheet_name, device, base_cents, final_cents, now])
 def build_html(data: dict, pin_sha256: str, defaults: dict, out_path: Path):
