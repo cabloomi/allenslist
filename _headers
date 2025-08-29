@@ -5,3 +5,6 @@
   Cache-Control: no-store, no-cache, must-revalidate
 
 Cache-Control: public, max-age=60, stale-while-revalidate=86400
+/data/prices.csv
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=300
