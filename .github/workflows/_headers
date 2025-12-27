@@ -1,5 +1,0 @@
-/config.json
-  Cache-Control: no-store, no-cache, must-revalidate
-
-/engine/*.json
-  Cache-Control: no-store, no-cache, must-revalidate
